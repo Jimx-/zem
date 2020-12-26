@@ -10,17 +10,15 @@
 #include "font.h"
 #include "renderer.h"
 
+static SCM g_root_view_module;
 static SCM g_root_view;
 
 static void window_size_callback(GLFWwindow* window, int width, int height)
 {
-    SCM root_view_module;
-    root_view_module = scm_c_resolve_module("zem ui root-view");
-
     RENDERER.set_display_size(width, height);
 
-    scm_call_3(SCM_VARIABLE_REF(
-                   scm_c_module_lookup(root_view_module, "root-view-set-size")),
+    scm_call_3(SCM_VARIABLE_REF(scm_c_module_lookup(g_root_view_module,
+                                                    "root-view-set-size")),
                g_root_view, scm_from_double((double)width),
                scm_from_double((double)height));
 }
@@ -62,18 +60,31 @@ static void key_callback(GLFWwindow* window, int glfw_key, int scancode,
     }
 }
 
+static void cursor_position_callback(GLFWwindow* window, double xpos,
+                                     double ypos)
+{
+    scm_call_3(SCM_VARIABLE_REF(scm_c_module_lookup(
+                   g_root_view_module, "view:mouse-position-callback")),
+               g_root_view, scm_from_double(xpos), scm_from_double(ypos));
+}
+
+static void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+{
+    scm_call_2(SCM_VARIABLE_REF(scm_c_module_lookup(
+                   g_root_view_module, "view:mouse-scroll-callback")),
+               g_root_view, scm_from_double(yoffset));
+}
+
 static void main_loop(GLFWwindow* window)
 {
-    SCM root_view_module;
     SCM view_draw;
     SCM view_update;
     std::chrono::steady_clock::time_point last_time;
     std::chrono::steady_clock::time_point cur_time;
     double delta;
 
-    root_view_module = scm_c_resolve_module("zem ui root-view");
-    view_draw = scm_c_module_lookup(root_view_module, "view:draw");
-    view_update = scm_c_module_lookup(root_view_module, "view:update");
+    view_draw = scm_c_module_lookup(g_root_view_module, "view:draw");
+    view_update = scm_c_module_lookup(g_root_view_module, "view:update");
 
     last_time = std::chrono::steady_clock::now();
 
@@ -110,8 +121,6 @@ static void main_loop(GLFWwindow* window)
 
 static void inner_main(void* data, int argc, char** argv)
 {
-    SCM root_view_module;
-
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -130,13 +139,15 @@ static void inner_main(void* data, int argc, char** argv)
 
     emacsy_initialize(EMACSY_INTERACTIVE);
 
-    root_view_module = scm_c_resolve_module("zem ui root-view");
+    g_root_view_module = scm_c_resolve_module("zem ui root-view");
     g_root_view = scm_call_0(SCM_VARIABLE_REF(
-        scm_c_module_lookup(root_view_module, "make-root-view")));
+        scm_c_module_lookup(g_root_view_module, "make-root-view")));
 
     window_size_callback(window, 800, 600);
     glfwSetWindowSizeCallback(window, window_size_callback);
     glfwSetKeyCallback(window, key_callback);
+    glfwSetCursorPosCallback(window, cursor_position_callback);
+    glfwSetScrollCallback(window, scroll_callback);
 
     main_loop(window);
 }

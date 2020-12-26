@@ -37,7 +37,8 @@
                           #f)
              #:init-keyword #:root-node
              #:accessor root-node)
-  (buffer-view #:init-keyword #:buffer-view #:accessor buffer-view))
+  (buffer-view #:init-keyword #:buffer-view #:accessor buffer-view)
+  (mouse-pos #:init-form '(0 . 0) #:accessor mouse-pos))
 
 (define (make-leaf-node pos size view locked?)
   (make-view-node 'leaf pos size view 0 locked? '() '()))
@@ -134,6 +135,15 @@
      (draw-node (node-right node)))
     (else #f)))
 
+(define (update-node node delta)
+  (case (node-type node)
+    ((leaf)
+     (view:update (node-view node) delta))
+    ((hsplit vsplit)
+     (update-node (node-left node) delta)
+     (update-node (node-right node) delta))
+    (else #f)))
+
 (define (make-root-view)
   (let* ((buffer-view (make <buffer-view>
                         #:buffer (begin
@@ -171,7 +181,15 @@
   (set! (root-node view)
         (update-node-layout (root-node view)
                             (view:pos view)
-                            (view:size view))))
+                            (view:size view)))
+
+  (update-node (root-node view) delta))
 
 (define-method (view:draw (view <root-view>))
   (draw-node (root-node view)))
+
+(define-method (view:mouse-position-callback (view <root-view>) x y)
+  (set! (mouse-pos view) (cons x y)))
+
+(define-method (view:mouse-scroll-callback (view <root-view>) y-offset)
+  (view:mouse-scroll-callback (buffer-view view) y-offset))

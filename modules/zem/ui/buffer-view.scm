@@ -35,6 +35,17 @@
   (match-let* (((w . _) (r:text-size-hint style:font (number->string line-max))))
               (+ w (floor (* 1.5 (car style:padding))))))
 
+(define (get-visible-line-range view line-max)
+  (match-let* (((x0 y0 x1 y1) (view:get-visible-bbox view))
+               (lh (get-line-height))
+               (visible-line-min (max 1 (floor (/ y0 lh))))
+               (visible-line-max (min line-max (1+ (floor (/ y1 lh))))))
+              (cons (inexact->exact visible-line-min) (inexact->exact visible-line-max))))
+
+(define-method (view:get-scroll-limit (view <buffer-view>))
+  (with-buffer (buffer-view:buffer view)
+    (* (get-line-height) (- (count-lines (point-min) (point-max)) 1))))
+
 (define (collect-line acc)
     (let ((c (char-after)))
       (cond
@@ -61,11 +72,11 @@
 (define (map-cdr fn c)
   (cons (car c) (fn (cdr c))))
 
-(define (draw-line-number num x y)
+(define (draw-line-number num x y width)
   (r:add-text style:font
               (cons x
                     (- y (get-text-y-offset)))
-              (number->string num)
+              (format #f (string-append "~" (number->string width) "@a") num)
               style:line-number-color))
 
 (define (draw-line lidx x y line line-height point-line point-col)
@@ -136,36 +147,43 @@
   (draw-view-background view style:background-color)
 
   (with-buffer (buffer-view:buffer view)
-    (let ((point-line (line-number-at-pos))
+    (let ((point-line (max 1 (line-number-at-pos)))
           (point-col (current-column))
           (mode-line (emacsy-mode-line)))
       (save-excursion
-          (goto-char (visible-point-min view))
-
         (match-let* (((view-x . view-y) (view:pos view))
                      ((view-width . view-height) (view:size view))
                      (lh (get-line-height))
                      (text-height (- view-height lh))
-                     (line-min 1)
-                     (line-max (inexact->exact (+ line-min (ceiling (/ text-height lh)))))
+                     (line-max (count-lines (point-min) (point-max)))
+                     ((visible-line-min . visible-line-max) (get-visible-line-range view line-max))
                      (line-x (+ (car style:padding) view-x))
                      (text-x (+ (get-text-x-offset line-max) view-x))
                      (mode-line-y text-height))
+                    ;; Move to the beginnin of the first visible line
+                    (goto-line visible-line-min)
+                    (move-beginning-of-line)
+                    ;; Draw background for line numbers
                     (r:add-rect (cons view-x view-y)
                                 (cons text-x text-height)
                                 style:line-number-background-color)
                     ;; Iterate each line
                     (let loop ((y lh)
-                               (lidx line-min))
+                               (lidx visible-line-min))
                       (if (and (< (point) (point-max))
-                               (< y (+ text-height lh)))
+                               (< y (+ text-height lh))
+                               (<= lidx visible-line-max))
                           (let* ((line (collect-line ""))
                                  (line-y (+ view-y y)))
                             (when (= lidx point-line)
+                              ;; Highlight current line
                               (r:add-rect (cons text-x (- line-y lh))
                                           (cons view-width lh)
                                           style:highlight-color))
-                            (draw-line-number lidx line-x line-y)
+                            (draw-line-number lidx
+                                              line-x
+                                              line-y
+                                              (string-length (number->string line-max)))
                             (draw-line lidx text-x line-y line lh point-line point-col)
                             (loop (+ y lh)
                                   (+ 1 lidx)))))

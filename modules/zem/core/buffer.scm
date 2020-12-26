@@ -41,9 +41,19 @@
                         x)))
            (done (+ done1 done2)))
       (goto-char max-point)
-      (if (and (not (= start end)))
+      (if (not (= start end))
           (1+ done)
           done))))
 
 (define*-public (line-number-at-pos #:optional (pos (point)))
   (count-lines (point-min) pos))
+
+(define-interactive (goto-line #:optional line)
+  #t)
+
+(define-interactive (goto-line #:optional (line (string->number
+                                                 (read-from-minibuffer "Goto line: "))))
+  (goto-char (point-min))
+  (re-search-forward newline-regex #f #t (max 0 (- line 1))))
+
+(define-key global-map "M-g M-g" 'goto-line)

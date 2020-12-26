@@ -1,7 +1,7 @@
 (define-module (zem ui style)
   #:use-module (zem api font))
 
-(define-public padding '(14 . 7))
+(define-public padding '(7 . 7))
 
 (define-public background-color #x272822)
 (define-public mode-line-background-color #x606060)
