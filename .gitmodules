@@ -1,0 +1,3 @@
+[submodule "3rdparty/emacsy"]
+	path = 3rdparty/emacsy
+	url = https://git.savannah.gnu.org/git/emacsy.git

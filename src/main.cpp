@@ -1,0 +1,148 @@
+#include <glad/glad.h>
+
+#include <GLFW/glfw3.h>
+#include <libguile.h>
+
+#include <chrono>
+
+#include <emacsy.h>
+
+#include "font.h"
+#include "renderer.h"
+
+static SCM g_root_view;
+
+static void window_size_callback(GLFWwindow* window, int width, int height)
+{
+    SCM root_view_module;
+    root_view_module = scm_c_resolve_module("zem ui root-view");
+
+    RENDERER.set_display_size(width, height);
+
+    scm_call_3(SCM_VARIABLE_REF(
+                   scm_c_module_lookup(root_view_module, "root-view-set-size")),
+               g_root_view, scm_from_double((double)width),
+               scm_from_double((double)height));
+}
+
+static void key_callback(GLFWwindow* window, int glfw_key, int scancode,
+                         int action, int mods)
+{
+    unsigned char key = 0;
+    int mod_flags = 0;
+
+    if (action == GLFW_PRESS) {
+        if (glfw_key >= GLFW_KEY_A && glfw_key <= GLFW_KEY_Z)
+            key = (unsigned char)(glfw_key + ('a' - 'A'));
+        else if (glfw_key < 256)
+            key = (unsigned char)glfw_key;
+        else {
+            switch (glfw_key) {
+            case GLFW_KEY_TAB:
+                key = '\t';
+                break;
+            case GLFW_KEY_ENTER:
+                key = '\n';
+                break;
+            case GLFW_KEY_ESCAPE:
+                key = '\033';
+                break;
+            case GLFW_KEY_BACKSPACE:
+                key = '\x7f';
+                break;
+            }
+        }
+
+        if (mods & GLFW_MOD_CONTROL) mod_flags |= EMACSY_MODKEY_CONTROL;
+        if (mods & GLFW_MOD_SHIFT) mod_flags |= EMACSY_MODKEY_SHIFT;
+        if (mods & GLFW_MOD_ALT) mod_flags |= EMACSY_MODKEY_META;
+        if (mods & GLFW_MOD_SUPER) mod_flags |= EMACSY_MODKEY_SUPER;
+
+        if (key) emacsy_key_event(key, mod_flags);
+    }
+}
+
+static void main_loop(GLFWwindow* window)
+{
+    SCM root_view_module;
+    SCM view_draw;
+    SCM view_update;
+    std::chrono::steady_clock::time_point last_time;
+    std::chrono::steady_clock::time_point cur_time;
+    double delta;
+
+    root_view_module = scm_c_resolve_module("zem ui root-view");
+    view_draw = scm_c_module_lookup(root_view_module, "view:draw");
+    view_update = scm_c_module_lookup(root_view_module, "view:update");
+
+    last_time = std::chrono::steady_clock::now();
+
+    while (glfwWindowShouldClose(window) == false) {
+        cur_time = std::chrono::steady_clock::now();
+        delta = std::chrono::duration_cast<std::chrono::microseconds>(cur_time -
+                                                                      last_time)
+                    .count() /
+                1000000.0;
+        last_time = cur_time;
+
+        if (emacsy_tick() & EMACSY_QUIT_APPLICATION_P) {
+            glfwSetWindowShouldClose(window, true);
+        }
+
+        scm_call_2(SCM_VARIABLE_REF(view_update), g_root_view,
+                   scm_from_double(delta));
+
+        RENDERER.begin_frame();
+
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        scm_call_1(SCM_VARIABLE_REF(view_draw), g_root_view);
+
+        RENDERER.end_frame();
+
+        glfwSwapBuffers(window);
+        glfwPollEvents();
+    }
+
+    emacsy_terminate();
+}
+
+static void inner_main(void* data, int argc, char** argv)
+{
+    SCM root_view_module;
+
+    glfwInit();
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+    GLFWwindow* window = glfwCreateWindow(800, 600, "Zem", nullptr, nullptr);
+    if (window == nullptr) {
+        glfwTerminate();
+        return;
+    }
+
+    glfwMakeContextCurrent(window);
+    gladLoadGL();
+
+    zem::init_renderer();
+
+    emacsy_initialize(EMACSY_INTERACTIVE);
+
+    root_view_module = scm_c_resolve_module("zem ui root-view");
+    g_root_view = scm_call_0(SCM_VARIABLE_REF(
+        scm_c_module_lookup(root_view_module, "make-root-view")));
+
+    window_size_callback(window, 800, 600);
+    glfwSetWindowSizeCallback(window, window_size_callback);
+    glfwSetKeyCallback(window, key_callback);
+
+    main_loop(window);
+}
+
+int main(int argc, char** argv)
+{
+    scm_boot_guile(argc, argv, inner_main, 0);
+    return 0;
+}
