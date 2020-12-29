@@ -13,13 +13,21 @@
 static SCM g_root_view_module;
 static SCM g_root_view;
 
+static void queue_redraw()
+{
+    static SCM func = SCM_VARIABLE_REF(
+        scm_c_module_lookup(g_root_view_module, "queue-redraw"));
+    scm_call_0(func);
+}
+
 static void window_size_callback(GLFWwindow* window, int width, int height)
 {
+    static SCM resize_func = SCM_VARIABLE_REF(
+        scm_c_module_lookup(g_root_view_module, "resize-root-view"));
+
     RENDERER.set_display_size(width, height);
 
-    scm_call_3(SCM_VARIABLE_REF(scm_c_module_lookup(g_root_view_module,
-                                                    "root-view-set-size")),
-               g_root_view, scm_from_double((double)width),
+    scm_call_3(resize_func, g_root_view, scm_from_double((double)width),
                scm_from_double((double)height));
 }
 
@@ -56,7 +64,10 @@ static void key_callback(GLFWwindow* window, int glfw_key, int scancode,
         if (mods & GLFW_MOD_ALT) mod_flags |= EMACSY_MODKEY_META;
         if (mods & GLFW_MOD_SUPER) mod_flags |= EMACSY_MODKEY_SUPER;
 
-        if (key) emacsy_key_event(key, mod_flags);
+        if (key) {
+            emacsy_key_event(key, mod_flags);
+            queue_redraw();
+        }
     }
 }
 
@@ -66,6 +77,7 @@ static void cursor_position_callback(GLFWwindow* window, double xpos,
     scm_call_3(SCM_VARIABLE_REF(scm_c_module_lookup(
                    g_root_view_module, "view:mouse-position-callback")),
                g_root_view, scm_from_double(xpos), scm_from_double(ypos));
+    queue_redraw();
 }
 
 static void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
@@ -73,18 +85,20 @@ static void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
     scm_call_2(SCM_VARIABLE_REF(scm_c_module_lookup(
                    g_root_view_module, "view:mouse-scroll-callback")),
                g_root_view, scm_from_double(yoffset));
+    queue_redraw();
 }
 
 static void main_loop(GLFWwindow* window)
 {
     SCM view_draw;
-    SCM view_update;
+    SCM update_root_view;
     std::chrono::steady_clock::time_point last_time;
     std::chrono::steady_clock::time_point cur_time;
     double delta;
 
     view_draw = scm_c_module_lookup(g_root_view_module, "view:draw");
-    view_update = scm_c_module_lookup(g_root_view_module, "view:update");
+    update_root_view =
+        scm_c_module_lookup(g_root_view_module, "update-root-view");
 
     last_time = std::chrono::steady_clock::now();
 
@@ -100,19 +114,22 @@ static void main_loop(GLFWwindow* window)
             glfwSetWindowShouldClose(window, true);
         }
 
-        scm_call_2(SCM_VARIABLE_REF(view_update), g_root_view,
-                   scm_from_double(delta));
+        SCM need_redraw = scm_call_2(SCM_VARIABLE_REF(update_root_view),
+                                     g_root_view, scm_from_double(delta));
 
-        RENDERER.begin_frame();
+        if (scm_to_bool(need_redraw)) {
+            RENDERER.begin_frame();
 
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        scm_call_1(SCM_VARIABLE_REF(view_draw), g_root_view);
+            scm_call_1(SCM_VARIABLE_REF(view_draw), g_root_view);
 
-        RENDERER.end_frame();
+            RENDERER.end_frame();
 
-        glfwSwapBuffers(window);
+            glfwSwapBuffers(window);
+        }
+
         glfwPollEvents();
     }
 
@@ -126,7 +143,7 @@ static void inner_main(void* data, int argc, char** argv)
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    GLFWwindow* window = glfwCreateWindow(800, 600, "Zem", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(800, 600, "ZEM", nullptr, nullptr);
     if (window == nullptr) {
         glfwTerminate();
         return;

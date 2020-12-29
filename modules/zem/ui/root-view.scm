@@ -12,6 +12,11 @@
   #:use-module (emacsy emacsy)
   #:export (make-root-view))
 
+(define need-redraw? #f)
+
+(define-public (queue-redraw)
+  (set! need-redraw? #t))
+
 (define-immutable-record-type <view-node>
   (make-view-node type pos size view split locked? left right)
   view-node?
@@ -164,12 +169,13 @@
                       #:buffer-view buffer-view)))
     root-view))
 
-(define (root-view-set-size view width height)
+(define (resize-root-view view width height)
   (set! (view:size view) (cons width height))
   (set! (root-node view)
         (update-node-layout (root-node view)
                             (view:pos view)
-                            (view:size view))))
+                            (view:size view)))
+  (queue-redraw))
 
 (define-method (view:update (view <root-view>) delta)
   (if (> delta 0.0)
@@ -185,8 +191,19 @@
 
   (update-node (root-node view) delta))
 
+(define-public (update-root-view view delta)
+  (view:update view delta)
+  need-redraw?)
+
 (define-method (view:draw (view <root-view>))
-  (draw-node (root-node view)))
+  (if need-redraw?
+      (draw-node (root-node view)))
+  (set! need-redraw? #f)
+
+  (r:add-text style:font
+              '(0 . 10)
+              (format #f "FPS: ~,2f" (or ticks-per-second 1))
+              style:text-color))
 
 (define-method (view:mouse-position-callback (view <root-view>) x y)
   (set! (mouse-pos view) (cons x y)))

@@ -3,6 +3,7 @@
   #:use-module ((zem api font) #:prefix f:)
   #:use-module (zem core buffer)
   #:use-module (zem ui view)
+  #:use-module (zem ui root-view)
   #:use-module ((zem ui style) #:prefix style:)
   #:use-module (zem ui highlight)
   #:use-module (emacsy emacsy)
@@ -12,8 +13,7 @@
   #:export (<buffer-view>))
 
 (define-class <buffer-view> (<view>)
-  (buffer #:init-keyword #:buffer #:accessor buffer-view:buffer)
-  (visible-point-min #:init-value 1 #:accessor visible-point-min))
+  (buffer #:init-keyword #:buffer #:accessor buffer-view:buffer))
 
 (define show-caret? #f)
 (define (blink-period)
@@ -22,6 +22,7 @@
       1))
 (define (toggle-caret)
   (set! show-caret? (not show-caret?))
+  (queue-redraw)
   (agenda-schedule toggle-caret (blink-period)))
 (agenda-schedule toggle-caret (blink-period))
 
@@ -61,7 +62,7 @@
 (define (syntax->color syn)
   (case syn
     ((keyword special) style:keyword-color)
-    ((symbol) style:symbol-color)
+    ((symbol) style:text-color)
     ((string) style:string-color)
     (else style:text-color)))
 
