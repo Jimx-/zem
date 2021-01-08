@@ -1,3 +1,6 @@
 [submodule "3rdparty/emacsy"]
 	path = 3rdparty/emacsy
-	url = https://git.savannah.gnu.org/git/emacsy.git
+	url = https://github.com/Jimx-/emacsy.git
+[submodule "3rdparty/tree-sitter-cpp"]
+	path = 3rdparty/tree-sitter-cpp
+	url = https://github.com/tree-sitter/tree-sitter-cpp.git

@@ -5,6 +5,7 @@
   #:use-module (zem ui minibuffer-view)
   #:use-module (zem ui buffer-view)
   #:use-module (zem core buffer)
+  #:use-module ((zem syntax tree-sitter) #:prefix ts:)
   #:use-module (ice-9 match)
   #:use-module (srfi srfi-9 gnu)
   #:use-module (srfi srfi-11)
@@ -153,6 +154,7 @@
   (let* ((buffer-view (make <buffer-view>
                         #:buffer (begin
                                    (find-file "../src/main.cpp")
+                                   (ts:setup-buffer (current-buffer))
                                    (current-buffer))))
          (buffer-node (make-leaf-node '(0 . 0)
                                       '(0 . 0)

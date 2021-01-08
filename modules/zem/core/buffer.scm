@@ -6,6 +6,8 @@
   #:use-module (oop goops)
   #:use-module (srfi srfi-1))
 
+(define-public (position-bytes pos) pos)
+
 (define-public (get-buffer name)
   (find (lambda (buffer)
           (string=? (buffer-name buffer) name))

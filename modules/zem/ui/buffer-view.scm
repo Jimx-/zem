@@ -6,6 +6,7 @@
   #:use-module (zem ui root-view)
   #:use-module ((zem ui style) #:prefix style:)
   #:use-module (zem ui highlight)
+  #:use-module ((zem syntax tree-sitter) #:prefix ts:)
   #:use-module (emacsy emacsy)
   #:use-module (ice-9 match)
   #:use-module (ice-9 gap-buffer)
@@ -64,6 +65,10 @@
     ((keyword special) style:keyword-color)
     ((symbol) style:text-color)
     ((string) style:string-color)
+    ((type) style:type-color)
+    ((operator) style:operator-color)
+    ((function) style:function-color)
+    ((number) style:number-color)
     (else style:text-color)))
 
 (define (draw-caret pos line-height)
@@ -80,59 +85,41 @@
               (format #f (string-append "~" (number->string width) "@a") num)
               style:line-number-color))
 
-(define (draw-line lidx x y line line-height point-line point-col)
-  (let ((lex (get-syntax-lexer (buffer-name (current-buffer))))
-        (draw-caret? (= lidx point-line)))
-    (let ((pos (let loop ((tokens (highlight-code line lex))
-                          (col 0)
-                          (tx x))
-                 (if (not (null? tokens))
-                     (match-let* (((color . text)
-                                   (match (car tokens)
-                                          ((syn text) (cons (syntax->color syn) text))
-                                          (text (cons style:text-color text))))
-                                  (new-col (+ (string-length text) col)))
-                                 (if (and draw-caret?
-                                          (>= point-col col)
-                                          (< point-col new-col))
-                                     ;; Caret is inside this token
-                                     (match-let* ((split (- point-col col))
-                                                  (head (substring text 0 split))
-                                                  (tail (substring text split))
-                                                  ((hx . _) (if (string-null? head)
-                                                                (cons tx y)
-                                                                (r:add-text style:font
-                                                                            (cons tx
-                                                                                  (- y (get-text-y-offset)))
-                                                                            head
-                                                                            color)))
-                                                  ((nx . _) (if (string-null? tail)
-                                                                (cons hx y)
-                                                                (r:add-text style:font
-                                                                            (cons hx
-                                                                                  (- y (get-text-y-offset)))
-                                                                            tail
-                                                                            color))))
-                                                 (draw-caret (cons hx (- y line-height))
-                                                             line-height)
-                                                 (loop (cdr tokens)
-                                                       new-col
-                                                       nx))
-                                     ;; Normal draw
-                                     (loop (cdr tokens)
-                                           new-col
-                                           (car (r:add-text style:font
-                                                            (cons tx
-                                                                  (- y (get-text-y-offset)))
-                                                            text
-                                                            color)))))
-                     (cons tx y)))))
-      (if (and draw-caret?
-               (= point-col (string-length line)))
-          ;; Caret is at EOL
-          (draw-caret (map-cdr (lambda (y)
-                                 (- y line-height)) pos)
-                      line-height)))))
+(define (draw-word line col x y word color line-height point-line point-col)
+  (let ((draw-caret? (= line point-line))
+        (new-col (+ (string-length word) col)))
+    (if (and draw-caret?
+             (>= point-col col)
+             (< point-col new-col))
+        ;; Caret is inside this fragment
+        (match-let* ((split (- point-col col))
+                     (head (substring word 0 split))
+                     (tail (substring word split))
+                     ((hx . _) (if (string-null? head)
+                                   (cons x y)
+                                   (r:add-text style:font
+                                               (cons x
+                                                     (- y (get-text-y-offset)))
+                                               head
+                                               color)))
+                     ((nx . _) (if (string-null? tail)
+                                   (cons hx y)
+                                   (r:add-text style:font
+                                               (cons hx
+                                                     (- y (get-text-y-offset)))
+                                               tail
+                                               color))))
+                    (draw-caret (cons hx (- y line-height))
+                                line-height)
+                    (cons new-col nx))
+        ;; Normal draw
+        (cons
+         new-col
+         (car (r:add-text style:font
+                          (cons x
+                                (- y (get-text-y-offset)))
+                          word
+                          color))))))
 
 (define (draw-mode-line x y width height mode-line)
   (r:add-rect (cons x y)
@@ -144,51 +131,171 @@
               mode-line
               style:text-color))
 
+
+(define (draw-text-fragment line col x y fragment color x-min line-height point-line point-col)
+  (if (string-null? fragment)
+      (list line col x y)
+      (let ((nlidx (string-index fragment #\newline)))
+        (if nlidx
+            (let ((word (substring fragment 0 (1+ nlidx)))
+                  (rest (substring fragment (1+ nlidx))))
+              (draw-word line
+                         col
+                         x
+                         y
+                         word
+                         color
+                         line-height
+                         point-line
+                         point-col)
+              (draw-text-fragment (1+ line)
+                                  0
+                                  x-min
+                                  (+ y line-height)
+                                  rest
+                                  color
+                                  x-min
+                                  line-height
+                                  point-line
+                                  point-col))
+            (match-let (((new-col . nx) (draw-word line
+                                                   col
+                                                   x
+                                                   y
+                                                   fragment
+                                                   color
+                                                   line-height
+                                                   point-line
+                                                   point-col)))
+                       (list line new-col nx y))))))
+
+(define (draw-gutter lidx visible-line-max line-max line-x text-x view-width y text-height view-y line-height point-line lines)
+    (if (and (< (point) (point-max))
+             (< y (+ text-height line-height))
+             (<= lidx visible-line-max))
+        (let* ((line (collect-line ""))
+               (line-y (+ view-y y)))
+          (when (= lidx point-line)
+            ;; Highlight current line
+            (r:add-rect (cons text-x (- line-y line-height))
+                        (cons view-width line-height)
+                        style:highlight-color))
+          (draw-line-number lidx
+                            line-x
+                            line-y
+                            (string-length (number->string line-max)))
+          (draw-gutter (1+ lidx)
+                       visible-line-max
+                       line-max
+                       line-x
+                       text-x
+                       view-width
+                       (+ y line-height)
+                       text-height
+                       view-y
+                       line-height
+                       point-line
+                       (string-append lines line (string #\newline))))
+        (cons (point) lines)))
+
+(define (draw-lines lines tokens line col tx ty text-x line-height hl-min point-line point-col last-end)
+  (let ((lines-offset (lambda (pt)  ;; Map points to offsets within lines
+                        (min (string-length lines)
+                             (max 0 (- (1+ pt) hl-min))))))
+    (if (not (null? tokens))
+        (match-let*
+         ((((start . end) . tag) (car tokens))
+          (token-min (lines-offset start))
+          (token-max (lines-offset end))
+          (filler (substring lines last-end token-min))
+          (text (substring lines token-min token-max))
+          ((fline fcol fx fy)
+           (draw-text-fragment line
+                               col
+                               tx
+                               ty
+                               filler
+                               style:text-color
+                               text-x
+                               line-height
+                               point-line
+                               point-col))
+          ((nline ncol nx ny)
+           (draw-text-fragment fline
+                               fcol
+                               fx
+                               fy
+                               text
+                               (syntax->color tag)
+                               text-x
+                               line-height
+                               point-line
+                               point-col)))
+         (draw-lines lines
+                     (cdr tokens)
+                     nline
+                     ncol
+                     nx
+                     ny
+                     text-x
+                     line-height
+                     hl-min
+                     point-line
+                     point-col
+                     token-max)))))
+
 (define-method (view:draw (view <buffer-view>))
   (draw-view-background view style:background-color)
 
-  (with-buffer (buffer-view:buffer view)
-    (let ((point-line (max 1 (line-number-at-pos)))
-          (point-col (current-column))
-          (mode-line (emacsy-mode-line)))
-      (save-excursion
-        (match-let* (((view-x . view-y) (view:pos view))
-                     ((view-width . view-height) (view:size view))
-                     (lh (get-line-height))
-                     (text-height (- view-height lh))
-                     (line-max (count-lines (point-min) (point-max)))
-                     ((visible-line-min . visible-line-max) (get-visible-line-range view line-max))
-                     (line-x (+ (car style:padding) view-x))
-                     (text-x (+ (get-text-x-offset line-max) view-x))
-                     (mode-line-y text-height))
-                    ;; Move to the beginnin of the first visible line
-                    (goto-line visible-line-min)
-                    (move-beginning-of-line)
-                    ;; Draw background for line numbers
-                    (r:add-rect (cons view-x view-y)
-                                (cons text-x text-height)
-                                style:line-number-background-color)
-                    ;; Iterate each line
-                    (let loop ((y lh)
-                               (lidx visible-line-min))
-                      (if (and (< (point) (point-max))
-                               (< y (+ text-height lh))
-                               (<= lidx visible-line-max))
-                          (let* ((line (collect-line ""))
-                                 (line-y (+ view-y y)))
-                            (when (= lidx point-line)
-                              ;; Highlight current line
-                              (r:add-rect (cons text-x (- line-y lh))
-                                          (cons view-width lh)
-                                          style:highlight-color))
-                            (draw-line-number lidx
-                                              line-x
-                                              line-y
-                                              (string-length (number->string line-max)))
-                            (draw-line lidx text-x line-y line lh point-line point-col)
-                            (loop (+ y lh)
-                                  (+ 1 lidx)))))
-                    (draw-mode-line view-x mode-line-y view-width lh mode-line))))))
+  (with-buffer
+   (buffer-view:buffer view)
+   (let ((point-line (max 1 (line-number-at-pos)))
+         (point-col (current-column))
+         (mode-line (emacsy-mode-line)))
+     (save-excursion
+      (match-let*
+       (((view-x . view-y) (view:pos view))           ;; View position
+        ((view-width . view-height) (view:size view)) ;; View size
+        (lh (get-line-height))                        ;; Line height in pixels
+        (text-height (- view-height lh))              ;; Text area height
+        (line-max                                     ;; Last line of buffer
+         (count-lines (point-min) (point-max)))       ;;
+        ((visible-line-min . visible-line-max)        ;; Visible line range
+         (get-visible-line-range view line-max))      ;;
+        (line-x (+ (car style:padding) view-x))       ;; Left of the gutter
+        (text-x (+ (get-text-x-offset line-max) view-x))
+        (mode-line-y text-height)
+        (hl-min (begin
+                  ;; Move to the beginnin of the first visible line
+                  (goto-line visible-line-min)
+                  (move-beginning-of-line)
+                  (point))))
+       ;; Draw background for gutter
+       (r:add-rect (cons view-x view-y)
+                   (cons text-x text-height)
+                   style:line-number-background-color)
+       ;; Iterate each line
+       (match-let*
+        (((hl-max . lines) (draw-gutter visible-line-min
+                                        visible-line-max
+                                        line-max
+                                        line-x
+                                        text-x
+                                        view-width
+                                        lh
+                                        text-height
+                                        view-y
+                                        lh
+                                        point-line
+                                        ""))
+         (tokens (ts:highlight-region (current-buffer)
+                                      hl-min
+                                      hl-max))
+         (lines-offset (lambda (pt)  ;; Map points to offsets within lines
+                         (min (string-length lines)
+                              (max 0 (- (1+ pt) hl-min))))))
+        (draw-lines lines tokens visible-line-min 0 text-x lh text-x lh hl-min point-line point-col 0))
+       (draw-mode-line view-x mode-line-y view-width lh mode-line))))))
 
 (define-public (switch-buffer-view-buffer view buffer)
   (set! (buffer-view:buffer view) buffer))

@@ -13,6 +13,10 @@
 static SCM g_root_view_module;
 static SCM g_root_view;
 
+namespace zem {
+extern void init_api();
+}
+
 static void queue_redraw()
 {
     static SCM func = SCM_VARIABLE_REF(
@@ -153,6 +157,7 @@ static void inner_main(void* data, int argc, char** argv)
     gladLoadGL();
 
     zem::init_renderer();
+    zem::init_api();
 
     emacsy_initialize(EMACSY_INTERACTIVE);
 
