@@ -1,6 +1,7 @@
 (define-module (zem syntax tree-sitter)
   #:use-module ((zem api tree-sitter) #:prefix tsapi:)
   #:use-module (zem core buffer)
+  #:use-module (zem core text-prop)
   #:use-module (ice-9 match)
   #:use-module (emacsy emacsy))
 
@@ -75,6 +76,10 @@
                      (cons (car captures) (dedup-captures end (cdr captures)))
                      (dedup-captures last-end (cdr captures))))))
 
+(define (highlight-capture capture)
+  (match capture
+         (((start . end) . tag) (put-text-property start end 'syntax tag))))
+
 (define-public (highlight-region buffer beg end)
   (update-buffer buffer)
   (with-buffer buffer
@@ -83,11 +88,12 @@
       (tsapi:query-cursor-set-byte-range cursor
                                          (position-bytes beg)
                                          (position-bytes end))
-      (dedup-captures
-       0
-       (tsapi:query-cursor-captures cursor
-                                    (local-var 'tree-sitter:highlight-query)
-                                    root)))))
+      (let ((captures (tsapi:query-cursor-captures
+                       cursor
+                       (local-var 'tree-sitter:highlight-query)
+                       root)))
+        (for-each highlight-capture captures)
+        (dedup-captures 0 captures)))))
 
 (define tree-sitter-highlight-patterns-cpp
 "[\"break\"

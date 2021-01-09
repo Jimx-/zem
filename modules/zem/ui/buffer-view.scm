@@ -2,11 +2,13 @@
   #:use-module ((zem api renderer) #:prefix r:)
   #:use-module ((zem api font) #:prefix f:)
   #:use-module (zem core buffer)
+  #:use-module (zem core text-prop)
   #:use-module (zem ui view)
   #:use-module (zem ui root-view)
   #:use-module ((zem ui style) #:prefix style:)
   #:use-module (zem ui highlight)
   #:use-module ((zem syntax tree-sitter) #:prefix ts:)
+  #:use-module (zem util plist)
   #:use-module (emacsy emacsy)
   #:use-module (ice-9 match)
   #:use-module (ice-9 gap-buffer)
@@ -198,13 +200,13 @@
                        (string-append lines line (string #\newline))))
         (cons (point) lines)))
 
-(define (draw-lines lines tokens line col tx ty text-x line-height hl-min point-line point-col last-end)
+(define (draw-intervals lines intervals line col tx ty text-x line-height hl-min point-line point-col last-end)
   (let ((lines-offset (lambda (pt)  ;; Map points to offsets within lines
                         (min (string-length lines)
                              (max 0 (- (1+ pt) hl-min))))))
-    (if (not (null? tokens))
+    (if (not (null? intervals))
         (match-let*
-         ((((start . end) . tag) (car tokens))
+         ((((start . end) . props) (car intervals))
           (token-min (lines-offset start))
           (token-max (lines-offset end))
           (filler (substring lines last-end token-min))
@@ -226,13 +228,13 @@
                                fx
                                fy
                                text
-                               (syntax->color tag)
+                               (syntax->color (plist-get props 'syntax))
                                text-x
                                line-height
                                point-line
                                point-col)))
-         (draw-lines lines
-                     (cdr tokens)
+         (draw-intervals lines
+                     (cdr intervals)
                      nline
                      ncol
                      nx
@@ -288,13 +290,14 @@
                                         lh
                                         point-line
                                         ""))
-         (tokens (ts:highlight-region (current-buffer)
-                                      hl-min
-                                      hl-max))
-         (lines-offset (lambda (pt)  ;; Map points to offsets within lines
-                         (min (string-length lines)
-                              (max 0 (- (1+ pt) hl-min))))))
-        (draw-lines lines tokens visible-line-min 0 text-x lh text-x lh hl-min point-line point-col 0))
+         (intervals (begin
+                      (ts:highlight-region (current-buffer)
+                                           hl-min
+                                           hl-max)
+                      (text-property-list (current-buffer)
+                                          hl-min
+                                          hl-max))))
+        (draw-intervals lines intervals visible-line-min 0 text-x lh text-x lh hl-min point-line point-col 0))
        (draw-mode-line view-x mode-line-y view-width lh mode-line))))))
 
 (define-public (switch-buffer-view-buffer view buffer)
