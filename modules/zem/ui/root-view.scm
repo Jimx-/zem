@@ -35,6 +35,13 @@
 (define-method (view:draw (view <empty-view>))
   (draw-view-background view style:background-color))
 
+(define active-view (make <empty-view>))
+
+(define (switch-view view)
+  (set! (view:active? active-view) #f)
+  (set! (view:active? view) #t)
+  (set! active-view view))
+
 (define-class <root-view> (<view>)
   (root-node #:init-form (make-leaf-node
                           '(0 . 0)
@@ -150,6 +157,23 @@
      (update-node (node-right node) delta))
     (else #f)))
 
+(define (hit-test node x y)
+  (case (node-type node)
+    ((leaf)
+     node)
+    ((hsplit)
+     (hit-test (if (< x (car (node-pos (node-right node))))
+                   (node-left node)
+                   (node-right node))
+               x
+               y))
+    ((vsplit)
+     (hit-test (if (< y (cdr (node-pos (node-right node))))
+                   (node-left node)
+                   (node-right node))
+               x
+               y))))
+
 (define (make-root-view)
   (let* ((buffer-view (make <buffer-view>
                         #:buffer (begin
@@ -169,6 +193,7 @@
                       #:size '(0 . 0)
                       #:root-node minibuffer-node
                       #:buffer-view buffer-view)))
+    (switch-view buffer-view)
     root-view))
 
 (define (resize-root-view view width height)
@@ -209,6 +234,10 @@
 
 (define-method (view:mouse-position-callback (view <root-view>) x y)
   (set! (mouse-pos view) (cons x y)))
+
+(define-method (view:mouse-press-callback (view <view>) button x y)
+  (let ((node (hit-test (root-node view) x y)))
+    (switch-view (node-view node))))
 
 (define-method (view:mouse-scroll-callback (view <root-view>) y-offset)
   (view:mouse-scroll-callback (buffer-view view) y-offset))

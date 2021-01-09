@@ -84,8 +84,9 @@
               (format #f (string-append "~" (number->string width) "@a") num)
               style:line-number-color))
 
-(define (draw-word line col x y word color line-height point-line point-col)
-  (let ((draw-caret? (= line point-line))
+(define (draw-word view line col x y word color line-height point-line point-col)
+  (let ((draw-caret? (and (view:active? view)
+                          (= line point-line)))
         (new-col (+ (string-length word) col)))
     (if (and draw-caret?
              (>= point-col col)
@@ -131,14 +132,15 @@
               style:text-color))
 
 
-(define (draw-text-fragment line col x y fragment color x-min line-height point-line point-col)
+(define (draw-text-fragment view line col x y fragment color x-min line-height point-line point-col)
   (if (string-null? fragment)
       (list line col x y)
       (let ((nlidx (string-index fragment #\newline)))
         (if nlidx
             (let ((word (substring fragment 0 (1+ nlidx)))
                   (rest (substring fragment (1+ nlidx))))
-              (draw-word line
+              (draw-word view
+                         line
                          col
                          x
                          y
@@ -147,7 +149,8 @@
                          line-height
                          point-line
                          point-col)
-              (draw-text-fragment (1+ line)
+              (draw-text-fragment view
+                                  (1+ line)
                                   0
                                   x-min
                                   (+ y line-height)
@@ -157,7 +160,8 @@
                                   line-height
                                   point-line
                                   point-col))
-            (match-let (((new-col . nx) (draw-word line
+            (match-let (((new-col . nx) (draw-word view
+                                                   line
                                                    col
                                                    x
                                                    y
@@ -168,13 +172,15 @@
                                                    point-col)))
                        (list line new-col nx y))))))
 
-(define (draw-gutter lidx visible-line-max line-max line-x text-x view-width y text-height view-y line-height point-line lines)
+(define (draw-gutter view lidx visible-line-max line-max line-x text-x view-width y text-height view-y line-height point-line lines)
     (if (and (< (point) (point-max))
              (< y (+ text-height line-height))
              (<= lidx visible-line-max))
         (let* ((line (collect-line ""))
                (line-y (+ view-y y)))
-          (when (= lidx point-line)
+          (when (and
+                 (view:active? view)
+                 (= lidx point-line))
             ;; Highlight current line
             (r:add-rect (cons text-x (- line-y line-height))
                         (cons view-width line-height)
@@ -183,7 +189,8 @@
                             line-x
                             line-y
                             (string-length (number->string line-max)))
-          (draw-gutter (1+ lidx)
+          (draw-gutter view
+                       (1+ lidx)
                        visible-line-max
                        line-max
                        line-x
@@ -197,7 +204,7 @@
                        (string-append lines line (string #\newline))))
         (cons (point) lines)))
 
-(define (draw-intervals lines intervals line col tx ty text-x line-height hl-min point-line point-col last-end)
+(define (draw-intervals view lines intervals line col tx ty text-x line-height hl-min point-line point-col last-end)
   (let ((lines-offset (lambda (pt)  ;; Map points to offsets within lines
                         (min (string-length lines)
                              (max 0 (- (1+ pt) hl-min))))))
@@ -210,7 +217,8 @@
           (text (substring lines token-min token-max))
           ((fline fcol fx fy)
            ;; Draw filler text between the previous and the current interval
-           (draw-text-fragment line
+           (draw-text-fragment view
+                               line
                                col
                                tx
                                ty
@@ -222,7 +230,8 @@
                                point-col))
           ((nline ncol nx ny)
            ;; Draw the current interval
-           (draw-text-fragment fline
+           (draw-text-fragment view
+                               fline
                                fcol
                                fx
                                fy
@@ -232,7 +241,8 @@
                                line-height
                                point-line
                                point-col)))
-         (draw-intervals lines
+         (draw-intervals view
+                         lines
                          (cdr intervals)
                          nline
                          ncol
@@ -245,7 +255,8 @@
                          point-col
                          token-max))
         ;; Draw text at the end
-        (draw-text-fragment line
+        (draw-text-fragment view
+                            line
                             col
                             tx
                             ty
@@ -288,7 +299,8 @@
                    style:line-number-background-color)
        ;; Iterate each line
        (match-let*
-        (((hl-max . lines) (draw-gutter visible-line-min
+        (((hl-max . lines) (draw-gutter view
+                                        visible-line-min
                                         visible-line-max
                                         line-max
                                         line-x
@@ -307,7 +319,8 @@
                       (text-property-list (current-buffer)
                                           hl-min
                                           hl-max))))
-        (draw-intervals lines
+        (draw-intervals view
+                        lines
                         intervals
                         visible-line-min
                         0
@@ -336,7 +349,7 @@
 
 (define-method (view:update (view <buffer-view>) delta)
   (with-buffer (buffer-view:buffer view)
-    (if (not (= (point) (buffer-view:last-point view)))
+    (when (not (= (point) (buffer-view:last-point view)))
         (scroll-to-point view)
         (set! (buffer-view:last-point view) (point))))
   (next-method))

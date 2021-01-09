@@ -5,6 +5,7 @@
   #:export (<view>
             view:pos
             view:size
+            view:active?
             view:scroll-target
             view:draw
             view:update
@@ -13,11 +14,13 @@
             view:get-visible-bbox
             view:get-scroll-limit
             view:mouse-position-callback
+            view:mouse-press-callback
             view:mouse-scroll-callback))
 
 (define-class <view> ()
   (pos #:init-keyword #:pos #:init-form '(0 . 0) #:accessor view:pos)
   (size #:init-keyword #:size #:init-form '(0 . 0) #:accessor view:size)
+  (active? #:init-value #f #:accessor view:active?)
   (scroll #:init-form '(0 . 0) #:accessor view:scroll)
   (scroll-target #:init-form '(0 . 0) #:accessor view:scroll-target))
 
@@ -50,6 +53,9 @@
   #f)
 
 (define-public mouse-scroll-factor 50)
+
+(define-method (view:mouse-press-callback (view <view>) button x y)
+  #f)
 
 (define-method (view:mouse-scroll-callback (view <view>) y-offset)
   (match-let (((sx . sy) (view:scroll-target view)))

@@ -84,6 +84,37 @@ static void cursor_position_callback(GLFWwindow* window, double xpos,
     queue_redraw();
 }
 
+void mouse_button_callback(GLFWwindow* window, int glfw_button, int action,
+                           int mods)
+{
+    int button;
+    double xpos, ypos;
+
+    switch (glfw_button) {
+    case GLFW_MOUSE_BUTTON_LEFT:
+        button = 1;
+        break;
+    case GLFW_MOUSE_BUTTON_MIDDLE:
+        button = 2;
+        break;
+    case GLFW_MOUSE_BUTTON_RIGHT:
+        button = 3;
+        break;
+    default:
+        button = 0;
+        break;
+    }
+
+    glfwGetCursorPos(window, &xpos, &ypos);
+
+    if (action == GLFW_PRESS) {
+        scm_call_4(SCM_VARIABLE_REF(scm_c_module_lookup(
+                       g_root_view_module, "view:mouse-press-callback")),
+                   g_root_view, scm_from_int(button), scm_from_double(xpos),
+                   scm_from_double(ypos));
+    }
+}
+
 static void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
     scm_call_2(SCM_VARIABLE_REF(scm_c_module_lookup(
@@ -169,6 +200,7 @@ static void inner_main(void* data, int argc, char** argv)
     glfwSetWindowSizeCallback(window, window_size_callback);
     glfwSetKeyCallback(window, key_callback);
     glfwSetCursorPosCallback(window, cursor_position_callback);
+    glfwSetMouseButtonCallback(window, mouse_button_callback);
     glfwSetScrollCallback(window, scroll_callback);
 
     main_loop(window);
