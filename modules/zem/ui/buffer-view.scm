@@ -15,7 +15,8 @@
   #:export (<buffer-view>))
 
 (define-class <buffer-view> (<view>)
-  (buffer #:init-keyword #:buffer #:accessor buffer-view:buffer))
+  (buffer #:init-keyword #:buffer #:accessor buffer-view:buffer)
+  (last-point #:init-value 0 #:accessor buffer-view:last-point))
 
 (define show-caret? #f)
 (define (blink-period)
@@ -75,9 +76,6 @@
 (define (draw-caret pos line-height)
   (when show-caret?
     (r:add-rect pos (cons style:caret-width line-height) style:caret-color)))
-
-(define (map-cdr fn c)
-  (cons (car c) (fn (cdr c))))
 
 (define (draw-line-number num x y width)
   (r:add-text style:font
@@ -325,3 +323,20 @@
 
 (define-public (switch-buffer-view-buffer view buffer)
   (set! (buffer-view:buffer view) buffer))
+
+(define (scroll-to-point view)
+  (let* ((size (view:size view))
+         (point-line (line-number-at-pos))
+         (y-min (* (get-line-height) (- point-line 2)))
+         (y-max (- (* (get-line-height) (+ point-line 5)) (cdr size)))
+         (scroll-target (view:scroll-target view)))
+    (set! (view:scroll-target view)
+          (cons (car scroll-target)
+                (max y-max (min y-min (cdr scroll-target)))))))
+
+(define-method (view:update (view <buffer-view>) delta)
+  (with-buffer (buffer-view:buffer view)
+    (if (not (= (point) (buffer-view:last-point view)))
+        (scroll-to-point view)
+        (set! (buffer-view:last-point view) (point))))
+  (next-method))

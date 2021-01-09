@@ -5,6 +5,7 @@
   #:export (<view>
             view:pos
             view:size
+            view:scroll-target
             view:draw
             view:update
             view:draw
