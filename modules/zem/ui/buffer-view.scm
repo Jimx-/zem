@@ -212,6 +212,7 @@
           (filler (substring lines last-end token-min))
           (text (substring lines token-min token-max))
           ((fline fcol fx fy)
+           ;; Draw filler text between the previous and the current interval
            (draw-text-fragment line
                                col
                                tx
@@ -223,6 +224,7 @@
                                point-line
                                point-col))
           ((nline ncol nx ny)
+           ;; Draw the current interval
            (draw-text-fragment fline
                                fcol
                                fx
@@ -234,17 +236,28 @@
                                point-line
                                point-col)))
          (draw-intervals lines
-                     (cdr intervals)
-                     nline
-                     ncol
-                     nx
-                     ny
-                     text-x
-                     line-height
-                     hl-min
-                     point-line
-                     point-col
-                     token-max)))))
+                         (cdr intervals)
+                         nline
+                         ncol
+                         nx
+                         ny
+                         text-x
+                         line-height
+                         hl-min
+                         point-line
+                         point-col
+                         token-max))
+        ;; Draw text at the end
+        (draw-text-fragment line
+                            col
+                            tx
+                            ty
+                            (substring lines last-end)
+                            style:text-color
+                            text-x
+                            line-height
+                            point-line
+                            point-col))))
 
 (define-method (view:draw (view <buffer-view>))
   (draw-view-background view style:background-color)
@@ -297,7 +310,18 @@
                       (text-property-list (current-buffer)
                                           hl-min
                                           hl-max))))
-        (draw-intervals lines intervals visible-line-min 0 text-x lh text-x lh hl-min point-line point-col 0))
+        (draw-intervals lines
+                        intervals
+                        visible-line-min
+                        0
+                        text-x
+                        lh
+                        text-x
+                        lh
+                        hl-min
+                        point-line
+                        point-col
+                        0))
        (draw-mode-line view-x mode-line-y view-width lh mode-line))))))
 
 (define-public (switch-buffer-view-buffer view buffer)
