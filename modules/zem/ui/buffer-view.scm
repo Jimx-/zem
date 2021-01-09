@@ -6,7 +6,6 @@
   #:use-module (zem ui view)
   #:use-module (zem ui root-view)
   #:use-module ((zem ui style) #:prefix style:)
-  #:use-module (zem ui highlight)
   #:use-module ((zem syntax tree-sitter) #:prefix ts:)
   #:use-module (zem util plist)
   #:use-module (emacsy emacsy)
