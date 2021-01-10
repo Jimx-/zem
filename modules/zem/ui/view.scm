@@ -6,6 +6,7 @@
             view:pos
             view:size
             view:active?
+            view:scroll
             view:scroll-target
             view:draw
             view:update

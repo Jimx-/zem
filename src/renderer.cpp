@@ -366,6 +366,28 @@ Vector2 Renderer::text_size_hint(Font* font, const std::string& text,
     return p;
 }
 
+unsigned int Renderer::char_offset(Font* font, const std::string& text,
+                                   float x_offset)
+{
+    unsigned int offset = 0;
+    float cur_x = 0.0;
+    std::u32string codepoints = conv_utf8_utf32.from_bytes(text);
+
+    for (auto&& codepoint : codepoints) {
+        auto [glyph, tex_id] = font->find_glyph((uint32_t)codepoint);
+
+        if (!tex_id) continue;
+
+        if (x_offset >= cur_x && x_offset < cur_x + glyph.x_advance)
+            return offset;
+
+        cur_x += glyph.x_advance;
+        offset++;
+    }
+
+    return offset;
+}
+
 void Renderer::setup_state()
 {
     glEnable(GL_BLEND);

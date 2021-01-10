@@ -353,3 +353,24 @@
         (scroll-to-point view)
         (set! (buffer-view:last-point view) (point))))
   (next-method))
+
+(define (move-point-to view x y)
+  (match-let* (((left . top) (view:pos view))
+               ((scroll-x . scroll-y) (view:scroll view))
+               (line (max 1 (inexact->exact
+                             (floor (/ (- (+ scroll-y y) top)
+                                       (get-line-height))))))
+               (line-text (begin
+                            (goto-line line)
+                            (move-beginning-of-line)
+                            (save-excursion
+                             (collect-line ""))))
+               (col (r:char-offset style:font line-text x)))
+              (forward-char col)
+              (cons line col)))
+
+(define-method (view:mouse-press-callback (view <buffer-view>) button x y)
+  (case button
+    ((left)
+     (with-buffer (buffer-view:buffer view)
+       (move-point-to view x y)))))

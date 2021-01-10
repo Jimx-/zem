@@ -60,6 +60,21 @@ static SCM zem_renderer_text_size_hint(SCM s_font, SCM s_text, SCM s_max_width)
     return scm_cons(scm_from_double(size.x), scm_from_double(size.y));
 }
 
+static SCM zem_renderer_char_offset(SCM s_font, SCM s_text, SCM s_x_offset)
+{
+    Font* font = (Font*)scm_foreign_object_ref(s_font, 0);
+    unsigned int offset;
+    std::unique_ptr<char[]> text;
+    float x_offset = 0;
+
+    text.reset(scm_to_locale_string(s_text));
+    x_offset = scm_to_double(s_x_offset);
+
+    offset = RENDERER.char_offset(font, std::string(text.get()), x_offset);
+
+    return scm_from_uint(offset);
+}
+
 static SCM zem_renderer_push_clip_rect(SCM s_pos, SCM s_size)
 {
     Vector2 pos = extract_vec2(s_pos);
@@ -82,12 +97,13 @@ void zem_api_renderer_init(void* data)
     scm_c_define_gsubr("add-text", 4, 1, 0, (void*)zem_renderer_add_text);
     scm_c_define_gsubr("text-size-hint", 2, 1, 0,
                        (void*)zem_renderer_text_size_hint);
+    scm_c_define_gsubr("char-offset", 3, 0, 0, (void*)zem_renderer_char_offset);
     scm_c_define_gsubr("push-clip-rect", 2, 0, 0,
                        (void*)zem_renderer_push_clip_rect);
     scm_c_define_gsubr("pop-clip-rect", 0, 0, 0,
                        (void*)zem_renderer_pop_clip_rect);
     scm_c_export("add-rect", "add-text", "text-size-hint", "push-clip-rect",
-                 "pop-clip-rect", NULL);
+                 "pop-clip-rect", "char-offset", NULL);
 }
 
 void init_renderer_api()

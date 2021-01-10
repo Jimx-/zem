@@ -235,9 +235,10 @@
 (define-method (view:mouse-position-callback (view <root-view>) x y)
   (set! (mouse-pos view) (cons x y)))
 
-(define-method (view:mouse-press-callback (view <view>) button x y)
+(define-method (view:mouse-press-callback (view <root-view>) button x y)
   (let ((node (hit-test (root-node view) x y)))
-    (switch-view (node-view node))))
+    (switch-view (node-view node))
+    (view:mouse-press-callback (node-view node) button x y)))
 
 (define-method (view:mouse-scroll-callback (view <root-view>) y-offset)
   (view:mouse-scroll-callback (buffer-view view) y-offset))

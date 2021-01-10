@@ -78,7 +78,9 @@
 
 (define (highlight-capture capture)
   (match capture
-         (((start . end) . tag) (put-text-property start end 'syntax tag))))
+         (((start . end) . tag)
+          (when (not (= start end))
+            (put-text-property start end 'syntax tag)))))
 
 (define-public (highlight-region buffer beg end)
   (update-buffer buffer)

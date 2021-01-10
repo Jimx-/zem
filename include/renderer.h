@@ -31,6 +31,8 @@ public:
 
     Vector2 text_size_hint(Font* font, const std::string& text,
                            float max_width = 0);
+    unsigned int char_offset(Font* font, const std::string& text,
+                             float x_offset);
 
     void push_clip_rect(const Vector2& pos, const Vector2& size);
     void pop_clip_rect();

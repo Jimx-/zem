@@ -87,21 +87,26 @@ static void cursor_position_callback(GLFWwindow* window, double xpos,
 void mouse_button_callback(GLFWwindow* window, int glfw_button, int action,
                            int mods)
 {
-    int button;
+    static SCM Qleft = scm_c_string_to_symbol("left");
+    static SCM Qmiddle = scm_c_string_to_symbol("middle");
+    static SCM Qright = scm_c_string_to_symbol("right");
+    static SCM Qunknown = scm_c_string_to_symbol("unknown");
+
+    SCM button;
     double xpos, ypos;
 
     switch (glfw_button) {
     case GLFW_MOUSE_BUTTON_LEFT:
-        button = 1;
+        button = Qleft;
         break;
     case GLFW_MOUSE_BUTTON_MIDDLE:
-        button = 2;
+        button = Qmiddle;
         break;
     case GLFW_MOUSE_BUTTON_RIGHT:
-        button = 3;
+        button = Qright;
         break;
     default:
-        button = 0;
+        button = Qunknown;
         break;
     }
 
@@ -110,7 +115,7 @@ void mouse_button_callback(GLFWwindow* window, int glfw_button, int action,
     if (action == GLFW_PRESS) {
         scm_call_4(SCM_VARIABLE_REF(scm_c_module_lookup(
                        g_root_view_module, "view:mouse-press-callback")),
-                   g_root_view, scm_from_int(button), scm_from_double(xpos),
+                   g_root_view, button, scm_from_double(xpos),
                    scm_from_double(ypos));
     }
 }

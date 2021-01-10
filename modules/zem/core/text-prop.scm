@@ -88,7 +88,11 @@
                   (reinsert-intervals
                    (if (prop-subset? new-props add-props)
                        tree
-                       (avl-insert tree interval new-props))
+                       (avl-insert (car (purge-range tree
+                                                     (interval:start interval)
+                                                     (interval:end interval)))
+                                   interval
+                                   new-props))
                    (cdr intervals) add-props))))
 
 (define* (add-text-properties start end props #:optional (object (current-buffer)))
