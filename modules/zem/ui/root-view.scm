@@ -196,8 +196,7 @@
   (set! (root-node view)
         (update-node-layout (root-node view)
                             (view:pos view)
-                            (view:size view)))
-  (queue-redraw))
+                            (view:size view))))
 
 (define-method (view:update (view <root-view>) delta)
   (if (> delta 0.0)
@@ -214,13 +213,10 @@
   (update-node (root-node view) delta))
 
 (define-public (update-root-view view delta)
-  (view:update view delta)
-  need-redraw?)
+  (view:update view delta))
 
 (define-method (view:draw (view <root-view>))
-  (if need-redraw?
-      (draw-node (root-node view)))
-  (set! need-redraw? #f)
+  (draw-node (root-node view))
 
   (r:add-text style:font
               '(0 . 10)

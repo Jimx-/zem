@@ -22,30 +22,9 @@
 (define newline-regex (make-regexp "\\\n"))
 
 (define-public (count-lines start end)
-  (save-excursion
-      (goto-char (point-min))
-    (let* ((max-point (max start end))
-           (done1 (let loop ((x 0)
-                             (p (point)))
-                    (if (and
-                         (re-search-forward newline-regex #f #t 40)
-                         (<= (point) max-point))
-                        (loop (+ x 40)
-                              (point))
-                        (begin
-                          (goto-char p)
-                          x))))
-           (done2 (let loop ((x 0))
-                    (if (and
-                         (re-search-forward newline-regex #f #t 1)
-                         (<= (point) max-point))
-                        (loop (1+ x))
-                        x)))
-           (done (+ done1 done2)))
-      (goto-char max-point)
-      (if (not (= start end))
-          (1+ done)
-          done))))
+  (if (> end start)
+      (1+ (string-count (substring (buffer-string) start (- end start)) #\newline))
+      0))
 
 (define*-public (line-number-at-pos #:optional (pos (point)))
   (count-lines (point-min) pos))

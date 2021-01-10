@@ -18,11 +18,6 @@
             view:mouse-press-callback
             view:mouse-scroll-callback))
 
-(define-public need-redraw? #f)
-
-(define-public (queue-redraw)
-  (set! need-redraw? #t))
-
 (define-class <view> ()
   (pos #:init-keyword #:pos #:init-form '(0 . 0) #:accessor view:pos)
   (size #:init-keyword #:size #:init-form '(0 . 0) #:accessor view:size)
@@ -38,9 +33,10 @@
   (cons (car scroll) (min (max 0 (cdr scroll)) (view:get-scroll-limit view))))
 
 (define-method (view:update (view <view>) delta)
-  (set! (view:scroll-target view)
-        (clamp-scroll-offset view (view:scroll-target view)))
-  (set! (view:scroll view) (view:scroll-target view)))
+  (when (not (equal? (view:scroll-target view) (view:scroll view)))
+    (set! (view:scroll-target view)
+          (clamp-scroll-offset view (view:scroll-target view)))
+    (set! (view:scroll view) (view:scroll-target view))))
 
 (define-method (view:draw (view <view>)))
 
@@ -65,8 +61,7 @@
 
 (define-method (view:mouse-scroll-callback (view <view>) y-offset)
   (match-let (((sx . sy) (view:scroll-target view)))
-             (set! (view:scroll-target view) (cons sx (- sy (* y-offset mouse-scroll-factor)))))
-  (queue-redraw))
+             (set! (view:scroll-target view) (cons sx (- sy (* y-offset mouse-scroll-factor))))))
 
 (define-public (draw-view-background view color)
   (r:add-rect (view:pos view) (view:size view) color))

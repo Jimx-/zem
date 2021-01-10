@@ -17,13 +17,6 @@ namespace zem {
 extern void init_api();
 }
 
-static void queue_redraw()
-{
-    static SCM func = SCM_VARIABLE_REF(
-        scm_c_module_lookup(g_root_view_module, "queue-redraw"));
-    scm_call_0(func);
-}
-
 static void window_size_callback(GLFWwindow* window, int width, int height)
 {
     static SCM resize_func = SCM_VARIABLE_REF(
@@ -70,7 +63,6 @@ static void key_callback(GLFWwindow* window, int glfw_key, int scancode,
 
         if (key) {
             emacsy_key_event(key, mod_flags);
-            queue_redraw();
         }
     }
 }
@@ -152,21 +144,19 @@ static void main_loop(GLFWwindow* window)
             glfwSetWindowShouldClose(window, true);
         }
 
-        SCM need_redraw = scm_call_2(SCM_VARIABLE_REF(update_root_view),
-                                     g_root_view, scm_from_double(delta));
+        scm_call_2(SCM_VARIABLE_REF(update_root_view), g_root_view,
+                   scm_from_double(delta));
 
-        if (scm_to_bool(need_redraw)) {
-            RENDERER.begin_frame();
+        RENDERER.begin_frame();
 
-            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-            scm_call_1(SCM_VARIABLE_REF(view_draw), g_root_view);
+        scm_call_1(SCM_VARIABLE_REF(view_draw), g_root_view);
 
-            RENDERER.end_frame();
+        RENDERER.end_frame();
 
-            glfwSwapBuffers(window);
-        }
+        glfwSwapBuffers(window);
 
         glfwPollEvents();
     }

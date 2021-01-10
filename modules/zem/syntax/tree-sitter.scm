@@ -57,6 +57,7 @@
       (set! (local-var 'tree-sitter:highlight-patterns) tree-sitter-highlight-patterns-cpp)
       (set! (local-var 'tree-sitter:highlight-query) #f)
       (ensure-highlight-query)
+      (highlight-region buffer (point-min) (point-max))
       (set! (local-var 'tree-sitter:before-change-point) #(0 0 (0 . 0) (0 . 0)))
       (add-hook! (local-var 'before-change-functions) ts-before-change)
       (add-hook! (local-var 'after-change-functions) ts-after-change))))
@@ -67,14 +68,6 @@
           (tsapi:parser-parse-string (local-var 'tree-sitter:parser)
                                      (buffer-string)
                                      (local-var 'tree-sitter:tree)))))
-
-(define (dedup-captures last-end captures)
-  (if (null? captures)
-      '()
-      (match-let ((((start . end) . _) (car captures)))
-                 (if (>= start last-end)
-                     (cons (car captures) (dedup-captures end (cdr captures)))
-                     (dedup-captures last-end (cdr captures))))))
 
 (define (highlight-capture capture)
   (match capture
@@ -94,8 +87,7 @@
                        cursor
                        (local-var 'tree-sitter:highlight-query)
                        root)))
-        (for-each highlight-capture captures)
-        (dedup-captures 0 captures)))))
+        (for-each highlight-capture captures)))))
 
 (define tree-sitter-highlight-patterns-cpp
 "[\"break\"

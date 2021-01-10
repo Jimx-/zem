@@ -26,7 +26,6 @@
       1))
 (define (toggle-caret)
   (set! show-caret? (not show-caret?))
-  (queue-redraw)
   (agenda-schedule toggle-caret (blink-period)))
 (agenda-schedule toggle-caret (blink-period))
 
@@ -51,17 +50,19 @@
   (with-buffer (buffer-view:buffer view)
     (* (get-line-height) (- (count-lines (point-min) (point-max)) 1))))
 
-(define (collect-line acc)
+(define (collect-line/recur)
     (let ((c (char-after)))
       (cond
        ((= (point) (point-max))
-        acc)
+        '())
        ((eqv? c #\newline)
         (forward-char)
-        acc)
+        '())
        (else
         (forward-char)
-        (collect-line (string-append acc (string c)))))))
+        (cons c (collect-line/recur))))))
+(define (collect-line)
+  (apply string (collect-line/recur)))
 
 (define (syntax->color syn)
   (case syn
@@ -173,11 +174,11 @@
                                                    point-col)))
                        (list line new-col nx y))))))
 
-(define (draw-gutter view lidx visible-line-max line-max line-x text-x view-width y text-height view-y line-height point-line lines)
+(define (draw-gutter/recur view lidx visible-line-max line-max line-x text-x view-width y text-height view-y line-height point-line)
     (if (and (< (point) (point-max))
              (< y (+ text-height line-height))
              (<= lidx visible-line-max))
-        (let* ((line (collect-line ""))
+        (let* ((line (collect-line))
                (line-y (+ view-y y)))
           (when (and
                  (view:active? view)
@@ -190,7 +191,7 @@
                             line-x
                             line-y
                             (string-length (number->string line-max)))
-          (draw-gutter view
+          (cons line (draw-gutter/recur view
                        (1+ lidx)
                        visible-line-max
                        line-max
@@ -201,9 +202,23 @@
                        text-height
                        view-y
                        line-height
-                       point-line
-                       (string-append lines line (string #\newline))))
-        (cons (point) lines)))
+                       point-line)))
+          '()))
+
+(define (draw-gutter view lidx visible-line-max line-max line-x text-x view-width y text-height view-y line-height point-line)
+  (let ((ls (draw-gutter/recur view
+                               lidx
+                               visible-line-max
+                               line-max
+                               line-x
+                               text-x
+                               view-width
+                               y
+                               text-height
+                               view-y
+                               line-height
+                               point-line)))
+    (cons (point) (string-join ls "\n"))))
 
 (define (draw-intervals view lines intervals line col tx ty text-x line-height hl-min point-line point-col last-end)
   (let ((lines-offset (lambda (pt)  ;; Map points to offsets within lines
@@ -311,8 +326,7 @@
                                         text-height
                                         view-y
                                         lh
-                                        point-line
-                                        ""))
+                                        point-line))
          (intervals (begin
                       (ts:highlight-region (current-buffer)
                                            hl-min
@@ -365,7 +379,7 @@
                             (goto-line line)
                             (move-beginning-of-line)
                             (save-excursion
-                             (collect-line ""))))
+                             (collect-line))))
                (col (r:char-offset style:font line-text x)))
               (forward-char col)
               (cons line col)))
