@@ -29,12 +29,13 @@
 (define-method (>? (a <string>) . rest) (apply string>? a rest))
 
 (define-immutable-record-type <avl-node>
-  (make-node key val left right)
+  (make-node key val left right height)
   avl-node?
   (key node-key)
   (val node-val)
   (left node-left)
-  (right node-right))
+  (right node-right)
+  (height node-height))
 
 (define (node->kvpair node)
   (cons (node-key node) (node-val node)))
@@ -48,12 +49,23 @@
 
 (define (make-empty-avl) '())
 
-(define avl-empty? null?)
+(define (tree-height root)
+  (if (null? root)
+      0
+      (node-height root)))
 
-(define (tree-height rt)
-  (if (null? rt) 0
-      (1+ (max (if (null? (node-left rt)) 0 (tree-height (node-left rt)))
-               (if (null? (node-right rt)) 0 (tree-height (node-right rt)))))))
+(define (make-leaf-node key val)
+  (make-node key val '() '() 1))
+
+(define (make-internal-node key val left right)
+  (make-node key
+             val
+             left
+             right
+             (1+ (max (tree-height left)
+                      (tree-height right)))))
+
+(define avl-empty? null?)
 
 (define (avl-violate? tr)
   (if (null? tr) #f
@@ -67,11 +79,13 @@
          (k3 (node-right k2))
          (k4 (node-left k2))
          (k5 (node-right k1)))
-    (set-fields k2
-                ((node-left) k4)
-                ((node-right) (set-fields k1
-                                          ((node-left) k3)
-                                          ((node-right) k5))))))
+    (make-internal-node (node-key k2)
+                        (node-val k2)
+                        k4
+                        (make-internal-node (node-key k1)
+                                            (node-val k1)
+                                            k3
+                                            k5))))
 
 (define (tree-single-left-rotate root)
   (let* ((k1 root)
@@ -79,21 +93,27 @@
          (k3 (node-right k2))
          (k4 (node-left k2))
          (k5 (node-left k1)))
-    (set-fields k2
-                ((node-left) (set-fields k1
-                                          ((node-left) k5)
-                                          ((node-right) k4)))
-                ((node-right) k3))))
+    (make-internal-node (node-key k2)
+                        (node-val k2)
+                        (make-internal-node (node-key k1)
+                                            (node-val k1)
+                                            k5
+                                            k4)
+                        k3)))
 
 (define (tree-left-right-rotate root)
   (tree-single-right-rotate
-   (set-fields root
-               ((node-left) (tree-single-left-rotate (node-left root))))))
+   (make-internal-node (node-key root)
+                       (node-val root)
+                       (tree-single-left-rotate (node-left root))
+                       (node-right root))))
 
 (define (tree-right-left-rotate root)
   (tree-single-left-rotate
-   (set-fields root
-               ((node-right) (tree-single-right-rotate (node-right root))))))
+   (make-internal-node (node-key root)
+                       (node-val root)
+                       (node-left root)
+                       (tree-single-right-rotate (node-right root)))))
 
 (define (insert-fixup root trace)
   (if (or
@@ -111,19 +131,26 @@
       (node-left node)
       (node-right node)))
 
+(define (set-child-node root dir child)
+  (if (eq? dir 'left)
+      (make-internal-node (node-key root)
+                          (node-val root)
+                          child
+                          (node-right root))
+      (make-internal-node (node-key root)
+                          (node-val root)
+                          (node-left root)
+                          child)))
+
 (define (insert-node/recur root key val)
   (if (null? root)
-      (list (make-node key val '() '()) '())
+      (list (make-leaf-node key val) '())
       (let* ((dir (if (<? key (node-key root))
                       'left
                       'right))
              (insert-res (insert-node/recur (node-choose-branch root dir) key val))
              (trace (cons dir (cdr insert-res)))
-             (new-root (if (eq? dir 'left)
-                           (set-fields root
-                                       ((node-left) (car insert-res)))
-                           (set-fields root
-                                       ((node-right) (car insert-res))))))
+             (new-root (set-child-node root dir (car insert-res))))
         (cons (if (avl-violate? new-root)
                   (insert-fixup new-root trace)
                   new-root)
@@ -151,8 +178,7 @@
                                      (node-key root)
                                      (node-val root)))
           (else (let* ((delete-res (delete-min/recur (node-left root)))
-                       (new-root (set-fields root
-                                             ((node-left) (car delete-res))))
+                       (new-root (set-child-node root 'left (car delete-res)))
                        (kv (cdr delete-res)))
                   (cons
                    (if (avl-violate? new-root)
@@ -182,18 +208,16 @@
                   (else (let* ((right-min-res (delete-min (node-right root)))
                                (right-min-kv (cdr right-min-res))
                                (right-node (car right-min-res)))
-                          (make-node (car right-min-kv)
-                                     (cadr right-min-kv)
-                                     (node-left root)
-                                     right-node))))
+                          (make-internal-node (car right-min-kv)
+                                              (cadr right-min-kv)
+                                              (node-left root)
+                                              right-node))))
                  (node-key root)
                  (node-val root))))
          (updated-node (car delete-res))
          (new-root (choose-branch root key
-                                  (set-fields root
-                                              ((node-left) updated-node))
-                                  (set-fields root
-                                              ((node-right) updated-node))
+                                  (set-child-node root 'left updated-node)
+                                  (set-child-node root 'right updated-node)
                                   updated-node))
          (kv (cdr delete-res)))
     (cons (if (avl-violate? new-root)
@@ -218,12 +242,7 @@
                          (update-node/recur (node-choose-branch root dir)
                                             key
                                             proc)))
-                       (cons updated
-                             (if (eq? dir 'left)
-                                 (set-fields root
-                                             ((node-left) updated-node))
-                                 (set-fields root
-                                             ((node-right) updated-node))))))))
+                       (cons updated (set-child-node root dir updated-node))))))
   (update-node/recur root key proc))
 
 (define (avl-start-iter root key preds depth)

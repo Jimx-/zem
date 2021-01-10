@@ -26,7 +26,8 @@
                               (position-bytes end)
                               start-point
                               old-end-point
-                              (position->ts-point end))))
+                              (position->ts-point end))
+             (highlight-region (current-buffer) start (point-max))))
 
 (define (highlight-query-capture-mapper name)
   (cond

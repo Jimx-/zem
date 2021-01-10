@@ -7,7 +7,6 @@
   #:use-module (zem ui view)
   #:use-module (zem ui root-view)
   #:use-module ((zem ui style) #:prefix style:)
-  #:use-module ((zem syntax tree-sitter) #:prefix ts:)
   #:use-module (zem util plist)
   #:use-module (emacsy emacsy)
   #:use-module (ice-9 match)
@@ -335,13 +334,9 @@
                                             view-y
                                             lh
                                             point-line))
-             (intervals (begin
-                          (ts:highlight-region (current-buffer)
-                                              hl-min
-                                              hl-max)
-                          (text-property-list (current-buffer)
+             (intervals (text-property-list (current-buffer)
                                             hl-min
-                                            hl-max))))
+                                            hl-max)))
             (draw-intervals view
                             lines
                             intervals
