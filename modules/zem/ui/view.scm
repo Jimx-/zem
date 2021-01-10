@@ -18,6 +18,11 @@
             view:mouse-press-callback
             view:mouse-scroll-callback))
 
+(define-public need-redraw? #f)
+
+(define-public (queue-redraw)
+  (set! need-redraw? #t))
+
 (define-class <view> ()
   (pos #:init-keyword #:pos #:init-form '(0 . 0) #:accessor view:pos)
   (size #:init-keyword #:size #:init-form '(0 . 0) #:accessor view:size)
@@ -60,7 +65,8 @@
 
 (define-method (view:mouse-scroll-callback (view <view>) y-offset)
   (match-let (((sx . sy) (view:scroll-target view)))
-             (set! (view:scroll-target view) (cons sx (- sy (* y-offset mouse-scroll-factor))))))
+             (set! (view:scroll-target view) (cons sx (- sy (* y-offset mouse-scroll-factor)))))
+  (queue-redraw))
 
 (define-public (draw-view-background view color)
   (r:add-rect (view:pos view) (view:size view) color))

@@ -81,7 +81,6 @@ static void cursor_position_callback(GLFWwindow* window, double xpos,
     scm_call_3(SCM_VARIABLE_REF(scm_c_module_lookup(
                    g_root_view_module, "view:mouse-position-callback")),
                g_root_view, scm_from_double(xpos), scm_from_double(ypos));
-    queue_redraw();
 }
 
 void mouse_button_callback(GLFWwindow* window, int glfw_button, int action,
@@ -125,7 +124,6 @@ static void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
     scm_call_2(SCM_VARIABLE_REF(scm_c_module_lookup(
                    g_root_view_module, "view:mouse-scroll-callback")),
                g_root_view, scm_from_double(yoffset));
-    queue_redraw();
 }
 
 static void main_loop(GLFWwindow* window)

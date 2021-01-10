@@ -2,6 +2,7 @@
   #:use-module ((zem api renderer) #:prefix r:)
   #:use-module ((zem api font) #:prefix f:)
   #:use-module (zem core buffer)
+  #:use-module (zem core commands)
   #:use-module (zem core text-prop)
   #:use-module (zem ui view)
   #:use-module (zem ui root-view)

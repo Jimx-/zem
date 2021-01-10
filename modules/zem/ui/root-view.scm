@@ -13,11 +13,6 @@
   #:use-module (emacsy emacsy)
   #:export (make-root-view))
 
-(define need-redraw? #f)
-
-(define-public (queue-redraw)
-  (set! need-redraw? #t))
-
 (define-immutable-record-type <view-node>
   (make-view-node type pos size view split locked? left right)
   view-node?
