@@ -106,6 +106,26 @@ static SCM zem_ts_tree_edit(SCM s_tree, SCM s_start_byte, SCM s_old_end_byte,
     return SCM_UNSPECIFIED;
 }
 
+static SCM zem_ts_tree_changed_ranges(SCM s_old_tree, SCM s_new_tree)
+{
+    SCMTree* old_tree = (SCMTree*)scm_foreign_object_ref(s_old_tree, 0);
+    SCMTree* new_tree = (SCMTree*)scm_foreign_object_ref(s_new_tree, 0);
+    uint32_t length;
+    TSRange* ranges =
+        ts_tree_get_changed_ranges(old_tree->tree, new_tree->tree, &length);
+
+    SCM result = scm_list_n(SCM_UNDEFINED);
+    for (int i = length - 1; i >= 0; i--) {
+        TSRange* range = &ranges[i];
+        SCM s_range = scm_cons(scm_from_uint32(range->start_byte),
+                               scm_from_uint32(range->end_byte));
+
+        result = scm_cons(s_range, result);
+    }
+
+    return result;
+}
+
 static SCM zem_ts_query_cursor_new()
 {
     TSQueryCursor* cursor;
@@ -251,6 +271,8 @@ static void zem_api_tree_sitter_init(void* data)
                        (void*)zem_ts_parser_parse_string);
     scm_c_define_gsubr("tree-root-node", 1, 0, 0, (void*)zem_ts_tree_root_node);
     scm_c_define_gsubr("tree-edit", 7, 0, 0, (void*)zem_ts_tree_edit);
+    scm_c_define_gsubr("tree-changed-ranges", 2, 0, 0,
+                       (void*)zem_ts_tree_changed_ranges);
     scm_c_define_gsubr("query-cursor-new", 0, 0, 0,
                        (void*)zem_ts_query_cursor_new);
     scm_c_define_gsubr("query-cursor-set-byte-range", 3, 0, 0,
@@ -260,8 +282,9 @@ static void zem_api_tree_sitter_init(void* data)
     scm_c_define_gsubr("query-new", 2, 0, 0, (void*)zem_ts_query_new);
 
     scm_c_export("parser-new", "parser-parse-string", "tree-root-node",
-                 "tree-edit", "query-cursor-new", "query-cursor-set-byte-range",
-                 "query-cursor-captures", "query-new", NULL);
+                 "tree-edit", "tree-changed-ranges", "query-cursor-new",
+                 "query-cursor-set-byte-range", "query-cursor-captures",
+                 "query-new", NULL);
 }
 
 void init_tree_sitter_api()

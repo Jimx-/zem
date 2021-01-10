@@ -27,7 +27,7 @@
                               start-point
                               old-end-point
                               (position->ts-point end))
-             (highlight-region (current-buffer) start (point-max))))
+             (update-buffer (current-buffer))))
 
 (define (highlight-query-capture-mapper name)
   (cond
@@ -63,12 +63,20 @@
       (add-hook! (local-var 'before-change-functions) ts-before-change)
       (add-hook! (local-var 'after-change-functions) ts-after-change))))
 
+(define (invalidate-highlight old-tree)
+  (let ((ranges (tsapi:tree-changed-ranges old-tree (local-var 'tree-sitter:tree))))
+    (for-each (match-lambda
+               ((beg . end) (highlight-region (current-buffer) beg end)))
+              ranges)))
+
 (define-public (update-buffer buffer)
   (with-buffer buffer
-    (set! (local-var 'tree-sitter:tree)
+    (let ((old-tree (local-var 'tree-sitter:tree)))
+      (set! (local-var 'tree-sitter:tree)
           (tsapi:parser-parse-string (local-var 'tree-sitter:parser)
                                      (buffer-string)
-                                     (local-var 'tree-sitter:tree)))))
+                                     (local-var 'tree-sitter:tree)))
+      (invalidate-highlight old-tree))))
 
 (define (highlight-capture capture)
   (match capture
@@ -77,7 +85,6 @@
             (put-text-property start end 'syntax tag)))))
 
 (define-public (highlight-region buffer beg end)
-  (update-buffer buffer)
   (with-buffer buffer
     (let ((cursor (local-var 'tree-sitter:query-cursor))
           (root (tsapi:tree-root-node (local-var 'tree-sitter:tree))))
