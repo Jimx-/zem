@@ -17,7 +17,8 @@
 
 (define-class <buffer-view> (<view>)
   (buffer #:init-keyword #:buffer #:accessor buffer-view:buffer)
-  (last-point #:init-value 0 #:accessor buffer-view:last-point))
+  (last-point #:init-form '(0 . 1) #:accessor buffer-view:last-point)
+  (last-visible-point-min #:init-value '(0 . 1) #:accessor buffer-view:last-visible-point-min))
 
 (define show-caret? #f)
 (define (blink-period)
@@ -283,90 +284,101 @@
                             point-line
                             point-col))))
 
+(define (move-to-visible-point-min view visible-line-min)
+  (if (not (= visible-line-min (cdr (buffer-view:last-visible-point-min view))))
+      (begin
+        (goto-line visible-line-min)
+        (move-beginning-of-line)
+        (set! (buffer-view:last-visible-point-min view) (cons (point) visible-line-min)))
+      (goto-char (car (buffer-view:last-visible-point-min view))))
+  (point))
+
 (define-method (view:draw (view <buffer-view>))
   (draw-view-background view style:background-color)
 
   (with-buffer
-   (buffer-view:buffer view)
-   (let ((point-line (max 1 (line-number-at-pos)))
-         (point-col (current-column))
-         (mode-line (emacsy-mode-line)))
-     (save-excursion
-      (match-let*
-       (((view-x . view-y) (view:pos view))           ;; View position
-        ((view-width . view-height) (view:size view)) ;; View size
-        (lh (get-line-height))                        ;; Line height in pixels
-        (text-height (- view-height lh))              ;; Text area height
-        (line-max                                     ;; Last line of buffer
-         (count-lines (point-min) (point-max)))       ;;
-        ((visible-line-min . visible-line-max)        ;; Visible line range
-         (get-visible-line-range view line-max))      ;;
-        (line-x (+ (car style:padding) view-x))       ;; Left of the gutter
-        (text-x (+ (get-text-x-offset line-max) view-x))
-        (mode-line-y text-height)
-        (hl-min (begin
-                  ;; Move to the beginnin of the first visible line
-                  (goto-line visible-line-min)
-                  (move-beginning-of-line)
-                  (point))))
-       ;; Draw background for gutter
-       (r:add-rect (cons view-x view-y)
-                   (cons text-x text-height)
-                   style:line-number-background-color)
-       ;; Iterate each line
-       (match-let*
-        (((hl-max . lines) (draw-gutter view
-                                        visible-line-min
-                                        visible-line-max
-                                        line-max
-                                        line-x
-                                        text-x
-                                        view-width
-                                        lh
-                                        text-height
-                                        view-y
-                                        lh
-                                        point-line))
-         (intervals (begin
-                      (ts:highlight-region (current-buffer)
-                                           hl-min
-                                           hl-max)
-                      (text-property-list (current-buffer)
-                                          hl-min
-                                          hl-max))))
-        (draw-intervals view
-                        lines
-                        intervals
-                        visible-line-min
-                        0
-                        text-x
-                        lh
-                        text-x
-                        lh
-                        hl-min
-                        point-line
-                        point-col
-                        0))
-       (draw-mode-line view-x mode-line-y view-width lh mode-line))))))
+      (buffer-view:buffer view)
+    (when (not (= (point) (car (buffer-view:last-point view))))
+      (update-point view))
+    (let ((point-line (max 1 (cdr (buffer-view:last-point view))))
+          (point-col (current-column))
+          (mode-line (emacsy-mode-line)))
+      (save-excursion
+          (match-let*
+           (((view-x . view-y) (view:pos view))           ;; View position
+            ((view-width . view-height) (view:size view)) ;; View size
+            (lh (get-line-height))                        ;; Line height in pixels
+            (text-height (- view-height lh))              ;; Text area height
+            (line-max                                     ;; Last line of buffer
+             (count-lines (point-min) (point-max)))       ;;
+            ((visible-line-min . visible-line-max)        ;; Visible line range
+             (get-visible-line-range view line-max))      ;;
+            (line-x (+ (car style:padding) view-x))       ;; Left of the gutter
+            (text-x (+ (get-text-x-offset line-max) view-x))
+            (mode-line-y text-height)
+            (hl-min (move-to-visible-point-min view visible-line-min)))
+           ;; Draw background for gutter
+           (r:add-rect (cons view-x view-y)
+                       (cons text-x text-height)
+                       style:line-number-background-color)
+           ;; Iterate each line
+           (match-let*
+            (((hl-max . lines) (draw-gutter view
+                                            visible-line-min
+                                            visible-line-max
+                                            line-max
+                                            line-x
+                                            text-x
+                                            view-width
+                                            lh
+                                            text-height
+                                            view-y
+                                            lh
+                                            point-line))
+             (intervals (begin
+                          (ts:highlight-region (current-buffer)
+                                              hl-min
+                                              hl-max)
+                          (text-property-list (current-buffer)
+                                            hl-min
+                                            hl-max))))
+            (draw-intervals view
+                            lines
+                            intervals
+                            visible-line-min
+                            0
+                            text-x
+                            lh
+                            text-x
+                            lh
+                            hl-min
+                            point-line
+                            point-col
+                            0))
+           (draw-mode-line view-x mode-line-y view-width lh mode-line))))))
 
 (define-public (switch-buffer-view-buffer view buffer)
   (set! (buffer-view:buffer view) buffer))
 
 (define (scroll-to-point view)
   (let* ((size (view:size view))
-         (point-line (line-number-at-pos))
+         (point-line (cdr (buffer-view:last-point view)))
          (y-min (* (get-line-height) (- point-line 2)))
          (y-max (- (* (get-line-height) (+ point-line 5)) (cdr size)))
          (scroll-target (view:scroll-target view)))
     (set! (view:scroll-target view)
           (cons (car scroll-target)
-                (max y-max (min y-min (cdr scroll-target)))))))
+                (max y-max (min y-min (cdr scroll-target)))))
+    point-line))
+
+(define (update-point view)
+  (set! (buffer-view:last-point view) (cons (point) (line-number-at-pos))))
 
 (define-method (view:update (view <buffer-view>) delta)
   (with-buffer (buffer-view:buffer view)
-    (when (not (= (point) (buffer-view:last-point view)))
-        (scroll-to-point view)
-        (set! (buffer-view:last-point view) (point))))
+    (when (not (= (point) (car (buffer-view:last-point view))))
+      (update-point view)
+      (scroll-to-point view)))
   (next-method))
 
 (define (move-point-to view x y)
