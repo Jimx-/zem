@@ -90,38 +90,23 @@
   (let ((draw-caret? (and (view:active? view)
                           (= line point-line)))
         (new-col (+ (string-length word) col)))
-    (if (and draw-caret?
-             (>= point-col col)
-             (< point-col new-col))
-        ;; Caret is inside this fragment
-        (match-let* ((split (- point-col col))
-                     (head (substring word 0 split))
-                     (tail (substring word split))
-                     ((hx . _) (if (string-null? head)
-                                   (cons x y)
-                                   (r:add-text style:font
-                                               (cons x
-                                                     (- y (get-text-y-offset)))
-                                               head
-                                               color)))
-                     ((nx . _) (if (string-null? tail)
-                                   (cons hx y)
-                                   (r:add-text style:font
-                                               (cons hx
-                                                     (- y (get-text-y-offset)))
-                                               tail
-                                               color))))
-                    (draw-caret (cons hx (- y line-height))
-                                line-height)
-                    (cons new-col nx))
-        ;; Normal draw
-        (cons
-         new-col
-         (car (r:add-text style:font
-                          (cons x
-                                (- y (get-text-y-offset)))
-                          word
-                          color))))))
+    (when (and draw-caret?
+               (>= point-col col)
+               (< point-col new-col))
+      (match-let* ((split (- point-col col))
+                   (head (substring word 0 split))
+                   ((hx . _) (if (string-null? head)
+                                 (cons 0 0)
+                                 (r:text-size-hint style:font head))))
+                  (draw-caret (cons (+ x hx) (- y line-height))
+                              line-height)))
+    (cons
+     new-col
+     (car (r:add-text style:font
+                      (cons x
+                            (- y (get-text-y-offset)))
+                      word
+                      color)))))
 
 (define (draw-mode-line x y width height mode-line)
   (r:add-rect (cons x y)
