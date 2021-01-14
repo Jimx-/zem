@@ -2,6 +2,7 @@
   #:use-module ((zem api tree-sitter) #:prefix tsapi:)
   #:use-module (zem core buffer)
   #:use-module (zem core text-prop)
+  #:use-module (zem progmodes cc-mode)  
   #:use-module (ice-9 match)
   #:use-module (emacsy emacsy))
 
@@ -66,7 +67,7 @@
 (define (invalidate-highlight old-tree)
   (let ((ranges (tsapi:tree-changed-ranges old-tree (local-var 'tree-sitter:tree))))
     (for-each (match-lambda
-               ((beg . end) (highlight-region (current-buffer) beg end)))
+               ((beg . end) (highlight-region (current-buffer) beg (point-max))))
               ranges)))
 
 (define-public (update-buffer buffer)
@@ -232,4 +233,4 @@
 [(string_literal)
  (system_lib_string)] @string")
 
-
+(add-hook! c++-mode-hook (lambda () (setup-buffer (current-buffer))))

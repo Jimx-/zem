@@ -173,7 +173,6 @@
   (let* ((buffer-view (make <buffer-view>
                         #:buffer (begin
                                    (find-file "../src/main.cpp")
-                                   (ts:setup-buffer (current-buffer))
                                    (current-buffer))))
          (buffer-node (make-leaf-node '(0 . 0)
                                       '(0 . 0)
