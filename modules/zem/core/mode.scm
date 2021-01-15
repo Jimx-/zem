@@ -6,39 +6,51 @@
   #:export (define-derived-mode)
   #:declarative? #f)
 
+(define (derived-mode-proc-name child)
+  (string->symbol (string-append "enter-"
+                                 (symbol->string
+                                  child))))
+
+(define (derived-mode-map-name child)
+  (string->symbol (string-append
+                   (symbol->string child)
+                   "-map")))
+
+(define (derived-mode-hook-name child)
+  (string->symbol (string-append
+                   (symbol->string child)
+                   "-hook")))
+
 (define-syntax define-derived-mode
   (lambda (x)
     (syntax-case x ()
       ((_ child parent name body ...)
        (syntax-case (datum->syntax x
-                                   (list (string->symbol (string-append "enter-"
-                                                                        (symbol->string
-                                                                         (syntax->datum #'child))))
-                                         (string->symbol (string-append (symbol->string
-                                                                         (syntax->datum #'child))
-                                                                        "-map"))
-                                         (string->symbol (string-append (symbol->string
-                                                                         (syntax->datum #'child))
-                                                                        "-hook"))))
+                                   (list (derived-mode-proc-name (syntax->datum #'child))
+                                         (derived-mode-map-name (syntax->datum #'child))
+                                         (derived-mode-hook-name (syntax->datum #'child))
+                                         (derived-mode-proc-name (syntax->datum #'parent))))
            ()
-         ((enter-mode map hook)
+         ((enter-mode map hook parent-proc)
           #`(begin
-              (unless (variable-bound? map)
-                (define-public map (make-keymap)))
+              (define-public map (make-keymap))
 
               (define-public child (make <mode> #:mode-name name #:mode-map map))
 
               (define-public hook (make-hook))
 
               (define-interactive (enter-mode)
+                body ...
+
+                (when (not (eq? parent fundamental-mode))
+                  (parent-proc))
+
                 (set! (local-var 'major-mode) child)
                 (set! (local-var 'mode-name) name)
 
                 (unless (keymap-parent map)
-                  (set! (keymap-parent (current-local-map))))
+                  (set! (keymap-parent map) (current-local-map)))
                 (use-local-map map)
-
-                body ...
 
                 (run-hook hook)))))))))
 
