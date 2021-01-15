@@ -50,4 +50,3 @@
 (define-public (set-auto-mode)
   (let ((mode-proc (find-auto-mode (buffer-name) auto-mode-alist)))
     (mode-proc)))
-

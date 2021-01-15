@@ -363,16 +363,20 @@
 
 (define (move-point-to view x y)
   (match-let* (((left . top) (view:pos view))
-               ((scroll-x . scroll-y) (view:scroll view))
-               (line (max 1 (inexact->exact
-                             (floor (/ (- (+ scroll-y y) top)
+               (line-max (count-lines (point-min) (point-max)))
+               ((visible-line-min . _) (get-visible-line-range view line-max))
+               (line (+ visible-line-min
+                        (inexact->exact
+                             (floor (/ (- y top)
                                        (get-line-height))))))
                (line-text (begin
                             (goto-line line)
                             (move-beginning-of-line)
                             (save-excursion
                              (collect-line))))
-               (col (r:char-offset style:font line-text x)))
+               (text-x (+ left
+                          (get-text-x-offset line-max)))
+               (col (r:char-offset style:font line-text (- x text-x))))
               (forward-char col)
               (cons line col)))
 
