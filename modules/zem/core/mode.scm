@@ -23,7 +23,8 @@
            ()
          ((enter-mode map hook)
           #`(begin
-              (define-public map (make-keymap))
+              (unless (variable-bound? map)
+                (define-public map (make-keymap)))
 
               (define-public child (make <mode> #:mode-name name #:mode-map map))
 
