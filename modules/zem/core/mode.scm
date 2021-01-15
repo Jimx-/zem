@@ -33,7 +33,13 @@
               (define-interactive (enter-mode)
                 (set! (local-var 'major-mode) child)
                 (set! (local-var 'mode-name) name)
+
+                (unless (keymap-parent map)
+                  (set! (keymap-parent (current-local-map))))
+                (use-local-map map)
+
                 body ...
+
                 (run-hook hook)))))))))
 
 (define-public auto-mode-alist '())
