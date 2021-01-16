@@ -46,6 +46,13 @@
                (visible-line-max (min line-max (1+ (floor (/ y1 lh))))))
               (cons (inexact->exact visible-line-min) (inexact->exact visible-line-max))))
 
+(define (get-selection view)
+  (let ((point (car (buffer-view:last-point view)))
+        (mark (mark)))
+    (and mark
+         (cons (min mark point)
+               (max mark point)))))
+
 (define-method (view:get-scroll-limit (view <buffer-view>))
   (with-buffer (buffer-view:buffer view)
     (* (get-line-height) (- (count-lines (point-min) (point-max)) 1))))
@@ -86,10 +93,30 @@
               (format #f (string-append "~" (number->string width) "@a") num)
               style:line-number-color))
 
-(define (draw-word view line col x y word color line-height point-line point-col)
+(define (intersect-selection view fragment start)
+  (let ((selection (get-selection view))
+        (len (string-length fragment)))
+    (and selection
+         (cond
+          ((>= start (cdr selection)) #f)
+          ((<= (+ start len) (car selection)) #f)
+          (else
+           (cons
+                 (max 0 (min (- (car selection) start) len))
+                 (max 0 (min (- (cdr selection) start) len))))))))
+
+(define (draw-word view line col x y word color line-height cur-point point-line point-col)
   (let ((draw-caret? (and (view:active? view)
                           (= line point-line)))
-        (new-col (+ (string-length word) col)))
+        (new-col (+ (string-length word) col))
+        (new-point (+ (string-length word) cur-point))
+        (selection (intersect-selection view word cur-point)))
+    (when selection
+      (let ((lx (car (r:text-size-hint style:font (substring word 0 (car selection)))))
+            (rx (car (r:text-size-hint style:font (substring word 0 (cdr selection))))))
+        (r:add-rect (cons (+ x lx) (- y line-height))
+                    (cons (- rx lx) line-height)
+                    style:highlight2-color)))
     (when (and draw-caret?
                (>= point-col col)
                (< point-col new-col))
@@ -100,13 +127,14 @@
                                  (r:text-size-hint style:font head))))
                   (draw-caret (cons (+ x hx) (- y line-height))
                               line-height)))
-    (cons
+    (list
      new-col
      (car (r:add-text style:font
                       (cons x
                             (- y (get-text-y-offset)))
                       word
-                      color)))))
+                      color))
+     new-point)))
 
 (define (draw-mode-line x y width height mode-line)
   (r:add-rect (cons x y)
@@ -119,35 +147,37 @@
               style:text-color))
 
 
-(define (draw-text-fragment view line col x y fragment color x-min line-height point-line point-col)
+(define (draw-text-fragment view line col x y fragment color x-min line-height cur-point point-line point-col)
   (if (string-null? fragment)
-      (list line col x y)
+      (list line col x y cur-point)
       (let ((nlidx (string-index fragment #\newline)))
         (if nlidx
-            (let ((word (substring fragment 0 (1+ nlidx)))
-                  (rest (substring fragment (1+ nlidx))))
-              (draw-word view
-                         line
-                         col
-                         x
-                         y
-                         word
-                         color
-                         line-height
-                         point-line
-                         point-col)
-              (draw-text-fragment view
-                                  (1+ line)
-                                  0
-                                  x-min
-                                  (+ y line-height)
-                                  rest
-                                  color
-                                  x-min
-                                  line-height
-                                  point-line
-                                  point-col))
-            (match-let (((new-col . nx) (draw-word view
+            (match-let* ((word (substring fragment 0 (1+ nlidx)))
+                         (rest (substring fragment (1+ nlidx)))
+                         ((_ _ npoint) (draw-word view
+                                                  line
+                                                  col
+                                                  x
+                                                  y
+                                                  word
+                                                  color
+                                                  line-height
+                                                  cur-point
+                                                  point-line
+                                                  point-col)))
+                        (draw-text-fragment view
+                                            (1+ line)
+                                            0
+                                            x-min
+                                            (+ y line-height)
+                                            rest
+                                            color
+                                            x-min
+                                            line-height
+                                            npoint
+                                            point-line
+                                            point-col))
+            (match-let (((new-col nx npoint) (draw-word view
                                                    line
                                                    col
                                                    x
@@ -155,9 +185,10 @@
                                                    fragment
                                                    color
                                                    line-height
+                                                   cur-point
                                                    point-line
                                                    point-col)))
-                       (list line new-col nx y))))))
+                       (list line new-col nx y npoint))))))
 
 (define (draw-gutter/recur view lidx visible-line-max line-max line-x text-x view-width y text-height view-y line-height point-line)
     (if (and (< (point) (point-max))
@@ -205,7 +236,7 @@
                                point-line)))
     (cons (point) (string-join ls "\n"))))
 
-(define (draw-intervals view lines intervals line col tx ty text-x line-height hl-min point-line point-col last-end)
+(define (draw-intervals view lines intervals line col tx ty text-x line-height hl-min cur-point point-line point-col last-end)
   (let ((lines-offset (lambda (pt)  ;; Map points to offsets within lines
                         (min (string-length lines)
                              (max 0 (- (1+ pt) hl-min))))))
@@ -216,7 +247,7 @@
           (token-max (lines-offset end))
           (filler (substring lines last-end token-min))
           (text (substring lines token-min token-max))
-          ((fline fcol fx fy)
+          ((fline fcol fx fy fpoint)
            ;; Draw filler text between the previous and the current interval
            (draw-text-fragment view
                                line
@@ -227,9 +258,10 @@
                                style:text-color
                                text-x
                                line-height
+                               cur-point
                                point-line
                                point-col))
-          ((nline ncol nx ny)
+          ((nline ncol nx ny npoint)
            ;; Draw the current interval
            (draw-text-fragment view
                                fline
@@ -240,6 +272,7 @@
                                (syntax->color (plist-get props 'syntax))
                                text-x
                                line-height
+                               fpoint
                                point-line
                                point-col)))
          (draw-intervals view
@@ -252,6 +285,7 @@
                          text-x
                          line-height
                          hl-min
+                         npoint
                          point-line
                          point-col
                          token-max))
@@ -265,6 +299,7 @@
                             style:text-color
                             text-x
                             line-height
+                            cur-point
                             point-line
                             point-col))))
 
@@ -331,6 +366,7 @@
                             lh
                             text-x
                             lh
+                            hl-min
                             hl-min
                             point-line
                             point-col

@@ -7,6 +7,7 @@
 (define-public mode-line-background-color #x606060)
 (define-public text-color #xf8f8f2)
 (define-public highlight-color #x333428)
+(define-public highlight2-color #x414236)
 (define-public keyword-color #xf92672)
 (define-public operator-color #xf92672)
 (define-public symbol-color #x66d9ef)
