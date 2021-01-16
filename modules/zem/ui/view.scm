@@ -16,6 +16,7 @@
             view:get-scroll-limit
             view:mouse-position-callback
             view:mouse-press-callback
+            view:mouse-release-callback
             view:mouse-scroll-callback))
 
 (define-class <view> ()
@@ -57,6 +58,9 @@
 (define-public mouse-scroll-factor 50)
 
 (define-method (view:mouse-press-callback (view <view>) button x y)
+  #f)
+
+(define-method (view:mouse-release-callback (view <view>) button)
   #f)
 
 (define-method (view:mouse-scroll-callback (view <view>) y-offset)

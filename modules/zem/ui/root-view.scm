@@ -29,13 +29,6 @@
 (define-method (view:draw (view <empty-view>))
   (draw-view-background view style:background-color))
 
-(define active-view (make <empty-view>))
-
-(define (switch-view view)
-  (set! (view:active? active-view) #f)
-  (set! (view:active? view) #t)
-  (set! active-view view))
-
 (define-class <root-view> (<view>)
   (root-node #:init-form (make-leaf-node
                           '(0 . 0)
@@ -45,7 +38,8 @@
              #:init-keyword #:root-node
              #:accessor root-node)
   (buffer-view #:init-keyword #:buffer-view #:accessor buffer-view)
-  (mouse-pos #:init-form '(0 . 0) #:accessor mouse-pos))
+  (mouse-pos #:init-form '(0 . 0) #:accessor mouse-pos)
+  (active-view #:init-form (make <empty-view>) #:accessor active-view))
 
 (define (make-leaf-node pos size view locked?)
   (make-view-node 'leaf pos size view 0 locked? '() '()))
@@ -168,6 +162,11 @@
                x
                y))))
 
+(define (switch-view root-view view)
+  (set! (view:active? (active-view root-view)) #f)
+  (set! (view:active? view) #t)
+  (set! (active-view root-view) view))
+
 (define (make-root-view)
   (let* ((buffer-view (make <buffer-view>
                         #:buffer (begin
@@ -186,7 +185,7 @@
                       #:size '(0 . 0)
                       #:root-node minibuffer-node
                       #:buffer-view buffer-view)))
-    (switch-view buffer-view)
+    (switch-view root-view buffer-view)
     root-view))
 
 (define (resize-root-view view width height)
@@ -222,12 +221,16 @@
               style:text-color))
 
 (define-method (view:mouse-position-callback (view <root-view>) x y)
+  (view:mouse-position-callback (active-view view) x y)
   (set! (mouse-pos view) (cons x y)))
 
 (define-method (view:mouse-press-callback (view <root-view>) button x y)
   (let ((node (hit-test (root-node view) x y)))
-    (switch-view (node-view node))
+    (switch-view view (node-view node))
     (view:mouse-press-callback (node-view node) button x y)))
+
+(define-method (view:mouse-release-callback (view <root-view>) button)
+  (view:mouse-release-callback (active-view view) button))
 
 (define-method (view:mouse-scroll-callback (view <root-view>) y-offset)
   (view:mouse-scroll-callback (buffer-view view) y-offset))

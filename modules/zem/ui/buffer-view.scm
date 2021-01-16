@@ -16,8 +16,9 @@
 
 (define-class <buffer-view> (<view>)
   (buffer #:init-keyword #:buffer #:accessor buffer-view:buffer)
+  (mouse-selecting? #:init-value #f #:accessor buffer-view:mouse-selecting?)
   (last-point #:init-form '(0 . 1) #:accessor buffer-view:last-point)
-  (last-visible-point-min #:init-value '(0 . 1) #:accessor buffer-view:last-visible-point-min))
+  (last-visible-point-min #:init-form '(0 . 1) #:accessor buffer-view:last-visible-point-min))
 
 (define show-caret? #f)
 (define (blink-period)
@@ -416,8 +417,24 @@
               (forward-char col)
               (cons line col)))
 
+(define-method (view:mouse-position-callback (view <buffer-view>) x y)
+  (when (buffer-view:mouse-selecting? view)
+    (with-buffer (buffer-view:buffer view)
+                 (let ((old-point (point)))
+                   (move-point-to view x y)
+                   (unless (eq? (point) old-point)
+                     (set! (buffer-view:mouse-selecting? view) 'moved))))))
+
 (define-method (view:mouse-press-callback (view <buffer-view>) button x y)
   (case button
     ((left)
      (with-buffer (buffer-view:buffer view)
-       (move-point-to view x y)))))
+                  (move-point-to view x y)
+                  (set-mark (point))
+                  (set! (buffer-view:mouse-selecting? view) 'clicked)))))
+
+(define-method (view:mouse-release-callback (view <buffer-view>) button)
+  (next-method)
+  (unless (eq? (buffer-view:mouse-selecting? view) 'moved)
+    (set-mark #f))
+  (set! (buffer-view:mouse-selecting? view) #f))

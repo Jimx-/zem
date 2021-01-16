@@ -101,13 +101,17 @@ void mouse_button_callback(GLFWwindow* window, int glfw_button, int action,
         break;
     }
 
-    glfwGetCursorPos(window, &xpos, &ypos);
-
     if (action == GLFW_PRESS) {
+        glfwGetCursorPos(window, &xpos, &ypos);
+
         scm_call_4(SCM_VARIABLE_REF(scm_c_module_lookup(
                        g_root_view_module, "view:mouse-press-callback")),
                    g_root_view, button, scm_from_double(xpos),
                    scm_from_double(ypos));
+    } else if (action == GLFW_RELEASE) {
+        scm_call_2(SCM_VARIABLE_REF(scm_c_module_lookup(
+                       g_root_view_module, "view:mouse-release-callback")),
+                   g_root_view, button);
     }
 }
 
