@@ -308,6 +308,14 @@
                             point-line
                             point-col))))
 
+(define (draw-scrollbar view visible-line-min visible-line-max line-max)
+  (match-let* (((view-x . view-y) (view:pos view))
+               ((view-width . view-height) (view:size view))
+               (x (- (+ view-x view-width) style:scrollbar-size))
+               (y (+ view-y (* view-height (/ visible-line-min line-max))))
+               (h (max 20 (/ (- visible-line-max visible-line-min) line-max))))
+              (r:add-rect (cons x y) (cons style:scrollbar-size h) style:scrollbar-color)))
+
 (define (move-to-visible-point-min view visible-line-min)
   (if (not (= visible-line-min (cdr (buffer-view:last-visible-point-min view))))
       (begin
@@ -376,6 +384,7 @@
                             point-line
                             point-col
                             0))
+           (draw-scrollbar view visible-line-min visible-line-max line-max)
            (draw-mode-line view-x mode-line-y view-width lh mode-line))))))
 
 (define-public (switch-buffer-view-buffer view buffer)

@@ -21,6 +21,9 @@
 (define-public divider-color #x0f0f0f)
 (define-public divider-size 1)
 
+(define-public scrollbar-color #x404040)
+(define-public scrollbar-size 6)
+
 (define-public font (load-font
                      "monospace.ttf"
                      13))
