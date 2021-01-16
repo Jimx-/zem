@@ -20,6 +20,10 @@
   (last-point #:init-form '(0 . 1) #:accessor buffer-view:last-point)
   (last-visible-point-min #:init-form '(0 . 1) #:accessor buffer-view:last-visible-point-min))
 
+(define-method (initialize (view <buffer-view>) . args)
+  (next-method)
+  (set! (view:cursor view) 'i-beam))
+
 (define show-caret? #f)
 (define (blink-period)
   (if ticks-per-second

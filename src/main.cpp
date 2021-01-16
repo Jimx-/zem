@@ -10,6 +10,8 @@
 #include "font.h"
 #include "renderer.h"
 
+static GLFWwindow* main_window;
+
 static SCM g_root_view_module;
 static SCM g_root_view;
 
@@ -165,7 +167,38 @@ static void main_loop(GLFWwindow* window)
         glfwPollEvents();
     }
 
+    glfwTerminate();
     emacsy_terminate();
+}
+
+static SCM zem_system_set_cursor(SCM s_cursor)
+{
+    GLFWcursor* cursor = nullptr;
+
+#define DEF_CURSOR(name, val, sym)                                           \
+    static GLFWcursor* name = glfwCreateStandardCursor(GLFW_##val##_CURSOR); \
+    static SCM Q##name = scm_c_string_to_symbol(sym);                        \
+    if (scm_is_eq(s_cursor, Q##name)) {                                      \
+        cursor = name;                                                       \
+    }
+
+    DEF_CURSOR(arrow, ARROW, "arrow");
+    DEF_CURSOR(ibeam, IBEAM, "i-beam");
+    DEF_CURSOR(crosshair, CROSSHAIR, "crosshair");
+    DEF_CURSOR(hand, HAND, "hand");
+    DEF_CURSOR(hresize, HRESIZE, "h-resize");
+    DEF_CURSOR(vresize, VRESIZE, "v-resize");
+
+    glfwSetCursor(main_window, cursor);
+
+    return SCM_UNSPECIFIED;
+#undef DEF_CURSOR
+}
+
+static void zem_api_system_init(void* data)
+{
+    scm_c_define_gsubr("set-cursor", 1, 0, 0, (void*)zem_system_set_cursor);
+    scm_c_export("set-cursor", nullptr);
 }
 
 static void inner_main(void* data, int argc, char** argv)
@@ -175,13 +208,13 @@ static void inner_main(void* data, int argc, char** argv)
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    GLFWwindow* window = glfwCreateWindow(800, 600, "ZEM", nullptr, nullptr);
-    if (window == nullptr) {
+    main_window = glfwCreateWindow(800, 600, "ZEM", nullptr, nullptr);
+    if (main_window == nullptr) {
         glfwTerminate();
         return;
     }
 
-    glfwMakeContextCurrent(window);
+    glfwMakeContextCurrent(main_window);
     gladLoadGL();
 
     zem::init_renderer();
@@ -189,18 +222,20 @@ static void inner_main(void* data, int argc, char** argv)
 
     emacsy_initialize(EMACSY_INTERACTIVE);
 
+    scm_c_define_module("zem api system", zem_api_system_init, nullptr);
+
     g_root_view_module = scm_c_resolve_module("zem ui root-view");
     g_root_view = scm_call_0(SCM_VARIABLE_REF(
         scm_c_module_lookup(g_root_view_module, "make-root-view")));
 
-    window_size_callback(window, 800, 600);
-    glfwSetWindowSizeCallback(window, window_size_callback);
-    glfwSetKeyCallback(window, key_callback);
-    glfwSetCursorPosCallback(window, cursor_position_callback);
-    glfwSetMouseButtonCallback(window, mouse_button_callback);
-    glfwSetScrollCallback(window, scroll_callback);
+    window_size_callback(main_window, 800, 600);
+    glfwSetWindowSizeCallback(main_window, window_size_callback);
+    glfwSetKeyCallback(main_window, key_callback);
+    glfwSetCursorPosCallback(main_window, cursor_position_callback);
+    glfwSetMouseButtonCallback(main_window, mouse_button_callback);
+    glfwSetScrollCallback(main_window, scroll_callback);
 
-    main_loop(window);
+    main_loop(main_window);
 }
 
 int main(int argc, char** argv)

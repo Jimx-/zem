@@ -1,5 +1,6 @@
 (define-module (zem ui root-view)
   #:use-module ((zem api renderer) #:prefix r:)
+  #:use-module ((zem api system) #:prefix sys:)
   #:use-module ((zem ui style) #:prefix style:)
   #:use-module (zem ui view)
   #:use-module (zem ui minibuffer-view)
@@ -222,6 +223,7 @@
 
 (define-method (view:mouse-position-callback (view <root-view>) x y)
   (view:mouse-position-callback (active-view view) x y)
+  (sys:set-cursor (view:cursor (active-view view)))
   (set! (mouse-pos view) (cons x y)))
 
 (define-method (view:mouse-press-callback (view <root-view>) button x y)

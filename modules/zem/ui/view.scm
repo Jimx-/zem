@@ -6,6 +6,7 @@
             view:pos
             view:size
             view:active?
+            view:cursor
             view:scroll
             view:scroll-target
             view:draw
@@ -23,6 +24,7 @@
   (pos #:init-keyword #:pos #:init-form '(0 . 0) #:accessor view:pos)
   (size #:init-keyword #:size #:init-form '(0 . 0) #:accessor view:size)
   (active? #:init-value #f #:accessor view:active?)
+  (cursor #:init-value 'arrow #:accessor view:cursor)
   (scroll #:init-form '(0 . 0) #:accessor view:scroll)
   (scroll-target #:init-form '(0 . 0) #:accessor view:scroll-target))
 
