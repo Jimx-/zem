@@ -328,7 +328,7 @@ Vector2 Renderer::add_text(Font* font, const Vector2& pos,
         if (!tex_id) continue;
 
         if (max_width != 0 && p.x + glyph.x_advance > max_width) {
-            p.x = 0;
+            p.x = pos.x;
             p.y += font->get_height_pixels();
         }
 
