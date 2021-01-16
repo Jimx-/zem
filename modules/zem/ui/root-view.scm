@@ -5,7 +5,6 @@
   #:use-module (zem ui minibuffer-view)
   #:use-module (zem ui buffer-view)
   #:use-module (zem core buffer)
-  #:use-module ((zem syntax tree-sitter) #:prefix ts:)
   #:use-module (ice-9 match)
   #:use-module (srfi srfi-9 gnu)
   #:use-module (srfi srfi-11)
