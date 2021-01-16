@@ -10,6 +10,8 @@
 #include "font.h"
 #include "renderer.h"
 
+#include "keymap.h"
+
 static GLFWwindow* main_window;
 
 static SCM g_root_view_module;
@@ -59,7 +61,14 @@ static void key_callback(GLFWwindow* window, int glfw_key, int scancode,
         }
 
         if (mods & GLFW_MOD_CONTROL) mod_flags |= EMACSY_MODKEY_CONTROL;
-        if (mods & GLFW_MOD_SHIFT) mod_flags |= EMACSY_MODKEY_SHIFT;
+
+        if (mods & GLFW_MOD_SHIFT) {
+            if (zem_keymap[glfw_key][SHIFT_COL])
+                key = zem_keymap[glfw_key][SHIFT_COL];
+            else
+                mod_flags |= EMACSY_MODKEY_SHIFT;
+        }
+
         if (mods & GLFW_MOD_ALT) mod_flags |= EMACSY_MODKEY_META;
         if (mods & GLFW_MOD_SUPER) mod_flags |= EMACSY_MODKEY_SUPER;
 
