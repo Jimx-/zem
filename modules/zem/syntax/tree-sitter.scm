@@ -1,11 +1,12 @@
 (define-module (zem syntax tree-sitter)
-  #:use-module ((zem api tree-sitter) #:prefix tsapi:)
   #:use-module (zem core buffer)
   #:use-module (zem core text-prop)
   #:use-module (zem core mode)
   #:use-module (zem progmodes cc-mode)
   #:use-module (ice-9 match)
   #:use-module (emacsy emacsy))
+
+(load-extension "libguile-tree-sitter" "init_tree_sitter")
 
 (define* (position->ts-point #:optional (pos (point)))
   (save-excursion
@@ -22,7 +23,7 @@
 (define (ts-after-change start end len)
   (match-let ((#(start-byte old-end-byte start-point old-end-point)
                (local-var 'tree-sitter:before-change-point)))
-             (tsapi:tree-edit (local-var 'tree-sitter:tree)
+             (tree-edit (local-var 'tree-sitter:tree)
                               start-byte
                               old-end-byte
                               (position-bytes end)
@@ -46,17 +47,17 @@
 (define (ensure-highlight-query)
   (unless (local-var 'tree-sitter:highlight-query)
     (set! (local-var 'tree-sitter:highlight-query)
-          (tsapi:query-new (local-var 'tree-sitter:highlight-patterns)
+          (query-new (local-var 'tree-sitter:highlight-patterns)
                            highlight-query-capture-mapper)))
   (local-var 'tree-sitter:highlight-query))
 
 (define-public (setup-buffer buffer)
   (with-buffer buffer
-    (let* ((parser (tsapi:parser-new))
-           (tree (tsapi:parser-parse-string parser (buffer-string))))
+    (let* ((parser (parser-new))
+           (tree (parser-parse-string parser (buffer-string))))
       (set! (local-var 'tree-sitter:parser) parser)
       (set! (local-var 'tree-sitter:tree) tree)
-      (set! (local-var 'tree-sitter:query-cursor) (tsapi:query-cursor-new))
+      (set! (local-var 'tree-sitter:query-cursor) (query-cursor-new))
       (set! (local-var 'tree-sitter:highlight-query) #f)
       (ensure-highlight-query)
       (highlight-region buffer (point-min) (point-max))
@@ -65,7 +66,7 @@
       (add-hook! (local-var 'after-change-functions) ts-after-change))))
 
 (define (invalidate-highlight old-tree)
-  (let ((ranges (tsapi:tree-changed-ranges old-tree (local-var 'tree-sitter:tree))))
+  (let ((ranges (tree-changed-ranges old-tree (local-var 'tree-sitter:tree))))
     (for-each (match-lambda
                ((beg . end) (highlight-region (current-buffer) beg (point-max))))
               ranges)))
@@ -74,7 +75,7 @@
   (with-buffer buffer
     (let ((old-tree (local-var 'tree-sitter:tree)))
       (set! (local-var 'tree-sitter:tree)
-          (tsapi:parser-parse-string (local-var 'tree-sitter:parser)
+          (parser-parse-string (local-var 'tree-sitter:parser)
                                      (buffer-string)
                                      (local-var 'tree-sitter:tree)))
       (invalidate-highlight old-tree))))
@@ -88,11 +89,11 @@
 (define-public (highlight-region buffer beg end)
   (with-buffer buffer
     (let ((cursor (local-var 'tree-sitter:query-cursor))
-          (root (tsapi:tree-root-node (local-var 'tree-sitter:tree))))
-      (tsapi:query-cursor-set-byte-range cursor
+          (root (tree-root-node (local-var 'tree-sitter:tree))))
+      (query-cursor-set-byte-range cursor
                                          (position-bytes beg)
                                          (position-bytes end))
-      (let ((captures (tsapi:query-cursor-captures
+      (let ((captures (query-cursor-captures
                        cursor
                        (local-var 'tree-sitter:highlight-query)
                        root)))

@@ -6,6 +6,8 @@ set(CMAKE_CXX_STANDARD 17)
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
+set(TOPDIR ${PROJECT_SOURCE_DIR})
+
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup(TARGETS)
 
@@ -15,12 +17,14 @@ find_package(Readline REQUIRED)
 
 find_package(Freetype REQUIRED)
 
-include_directories(${PROJECT_SOURCE_DIR}/include/
-    ${PROJECT_SOURCE_DIR}/modules/emacsy/
+include_directories(${TOPDIR}/include/
+    ${TOPDIR}/modules/emacsy/
     ${CONAN_INCLUDE_DIRS}
     ${GUILE_INCLUDE_DIR}
     ${FREETYPE_INCLUDE_DIR}
     )
+
+add_subdirectory(extensions)
 
 set(ZEM_SRCLIST
     src/main.cpp
@@ -31,21 +35,17 @@ set(ZEM_SRCLIST
     src/api/api.cpp
     src/api/renderer.cpp
     src/api/font.cpp
-    src/api/tree-sitter.cpp
     )
 
 set(EXT_SRCLIST
     modules/emacsy/emacsy.c
-    3rdparty/tree-sitter-cpp/src/parser.c
-    3rdparty/tree-sitter-cpp/src/scanner.cc
     )
 
 add_executable(zem ${ZEM_SRCLIST} ${EXT_SRCLIST})
-
+    
 target_link_libraries(zem CONAN_PKG::glad
                           CONAN_PKG::glfw
                           CONAN_PKG::spdlog
-                          CONAN_PKG::tree-sitter
                           ${GUILE_LIBRARY}
                           ${READLINE_LIBRARY}
                           ${FREETYPE_LIBRARIES})

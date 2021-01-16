@@ -10,8 +10,6 @@ extern "C"
     TSLanguage* tree_sitter_cpp();
 }
 
-namespace zem {
-
 static SCM parser_type;
 static SCM tree_type;
 static SCM node_type;
@@ -240,57 +238,54 @@ static void finalize_query(SCM s_query)
     ts_query_delete(query->query);
 }
 
-static void zem_api_tree_sitter_init(void* data)
+extern "C"
 {
-    SCM name, slots;
-    scm_t_struct_finalize finalizer;
+    void init_tree_sitter()
+    {
+        SCM name, slots;
+        scm_t_struct_finalize finalizer;
 
-    name = scm_from_utf8_symbol("tree-sitter-parser");
-    slots = scm_list_1(scm_from_utf8_symbol("data"));
-    parser_type = scm_make_foreign_object_type(name, slots, finalize_parser);
+        name = scm_from_utf8_symbol("tree-sitter-parser");
+        slots = scm_list_1(scm_from_utf8_symbol("data"));
+        parser_type =
+            scm_make_foreign_object_type(name, slots, finalize_parser);
 
-    name = scm_from_utf8_symbol("tree-sitter-tree");
-    slots = scm_list_1(scm_from_utf8_symbol("data"));
-    tree_type = scm_make_foreign_object_type(name, slots, finalize_tree);
+        name = scm_from_utf8_symbol("tree-sitter-tree");
+        slots = scm_list_1(scm_from_utf8_symbol("data"));
+        tree_type = scm_make_foreign_object_type(name, slots, finalize_tree);
 
-    name = scm_from_utf8_symbol("tree-sitter-node");
-    slots = scm_list_1(scm_from_utf8_symbol("data"));
-    node_type = scm_make_foreign_object_type(name, slots, finalize_node);
+        name = scm_from_utf8_symbol("tree-sitter-node");
+        slots = scm_list_1(scm_from_utf8_symbol("data"));
+        node_type = scm_make_foreign_object_type(name, slots, finalize_node);
 
-    name = scm_from_utf8_symbol("tree-sitter-query-cusor");
-    slots = scm_list_1(scm_from_utf8_symbol("data"));
-    query_cursor_type =
-        scm_make_foreign_object_type(name, slots, finalize_query_cursor);
+        name = scm_from_utf8_symbol("tree-sitter-query-cusor");
+        slots = scm_list_1(scm_from_utf8_symbol("data"));
+        query_cursor_type =
+            scm_make_foreign_object_type(name, slots, finalize_query_cursor);
 
-    name = scm_from_utf8_symbol("tree-sitter-query");
-    slots = scm_list_1(scm_from_utf8_symbol("data"));
-    query_type = scm_make_foreign_object_type(name, slots, finalize_query);
+        name = scm_from_utf8_symbol("tree-sitter-query");
+        slots = scm_list_1(scm_from_utf8_symbol("data"));
+        query_type = scm_make_foreign_object_type(name, slots, finalize_query);
 
-    scm_c_define_gsubr("parser-new", 0, 0, 0, (void*)zem_ts_parser_new);
-    scm_c_define_gsubr("parser-parse-string", 2, 1, 0,
-                       (void*)zem_ts_parser_parse_string);
-    scm_c_define_gsubr("tree-root-node", 1, 0, 0, (void*)zem_ts_tree_root_node);
-    scm_c_define_gsubr("tree-edit", 7, 0, 0, (void*)zem_ts_tree_edit);
-    scm_c_define_gsubr("tree-changed-ranges", 2, 0, 0,
-                       (void*)zem_ts_tree_changed_ranges);
-    scm_c_define_gsubr("query-cursor-new", 0, 0, 0,
-                       (void*)zem_ts_query_cursor_new);
-    scm_c_define_gsubr("query-cursor-set-byte-range", 3, 0, 0,
-                       (void*)zem_ts_query_cursor_set_byte_range);
-    scm_c_define_gsubr("query-cursor-captures", 3, 0, 0,
-                       (void*)zem_ts_query_cursor_captures);
-    scm_c_define_gsubr("query-new", 2, 0, 0, (void*)zem_ts_query_new);
+        scm_c_define_gsubr("parser-new", 0, 0, 0, (void*)zem_ts_parser_new);
+        scm_c_define_gsubr("parser-parse-string", 2, 1, 0,
+                           (void*)zem_ts_parser_parse_string);
+        scm_c_define_gsubr("tree-root-node", 1, 0, 0,
+                           (void*)zem_ts_tree_root_node);
+        scm_c_define_gsubr("tree-edit", 7, 0, 0, (void*)zem_ts_tree_edit);
+        scm_c_define_gsubr("tree-changed-ranges", 2, 0, 0,
+                           (void*)zem_ts_tree_changed_ranges);
+        scm_c_define_gsubr("query-cursor-new", 0, 0, 0,
+                           (void*)zem_ts_query_cursor_new);
+        scm_c_define_gsubr("query-cursor-set-byte-range", 3, 0, 0,
+                           (void*)zem_ts_query_cursor_set_byte_range);
+        scm_c_define_gsubr("query-cursor-captures", 3, 0, 0,
+                           (void*)zem_ts_query_cursor_captures);
+        scm_c_define_gsubr("query-new", 2, 0, 0, (void*)zem_ts_query_new);
 
-    scm_c_export("parser-new", "parser-parse-string", "tree-root-node",
-                 "tree-edit", "tree-changed-ranges", "query-cursor-new",
-                 "query-cursor-set-byte-range", "query-cursor-captures",
-                 "query-new", NULL);
+        scm_c_export("parser-new", "parser-parse-string", "tree-root-node",
+                     "tree-edit", "tree-changed-ranges", "query-cursor-new",
+                     "query-cursor-set-byte-range", "query-cursor-captures",
+                     "query-new", NULL);
+    }
 }
-
-void init_tree_sitter_api()
-{
-    scm_c_define_module("zem api tree-sitter", zem_api_tree_sitter_init,
-                        nullptr);
-}
-
-} // namespace zem
