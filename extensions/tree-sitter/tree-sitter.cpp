@@ -5,11 +5,6 @@
 #include <tree_sitter/api.h>
 #include <vector>
 
-extern "C"
-{
-    TSLanguage* tree_sitter_cpp();
-}
-
 static SCM parser_type;
 static SCM tree_type;
 static SCM node_type;
@@ -36,13 +31,14 @@ static TSPoint extract_tspoint(SCM val)
     return pt;
 }
 
-static SCM zem_ts_parser_new()
+static SCM zem_ts_parser_new(SCM s_lang)
 {
     TSParser* parser;
+    TSLanguage* lang = (TSLanguage*)scm_foreign_object_ref(s_lang, 0);
 
     parser = ts_parser_new();
 
-    ts_parser_set_language(parser, tree_sitter_cpp());
+    ts_parser_set_language(parser, lang);
 
     return scm_make_foreign_object_1(parser_type, parser);
 }
@@ -184,8 +180,9 @@ static SCM zem_ts_query_cursor_captures(SCM s_cursor, SCM s_query, SCM s_node)
     return result;
 }
 
-static SCM zem_ts_query_new(SCM s_source, SCM s_mapper)
+static SCM zem_ts_query_new(SCM s_lang, SCM s_source, SCM s_mapper)
 {
+    TSLanguage* lang = (TSLanguage*)scm_foreign_object_ref(s_lang, 0);
     void* ptr;
     SCMQuery* query;
     uint32_t error_offset;
@@ -196,9 +193,8 @@ static SCM zem_ts_query_new(SCM s_source, SCM s_mapper)
     ptr = scm_gc_malloc(sizeof(SCMQuery), "tree-sitter");
     query = new (ptr) SCMQuery;
 
-    query->query =
-        ts_query_new(tree_sitter_cpp(), source.get(), strlen(source.get()),
-                     &error_offset, &error_type);
+    query->query = ts_query_new(lang, source.get(), strlen(source.get()),
+                                &error_offset, &error_type);
     assert(error_type == TSQueryErrorNone);
 
     for (int i = 0; i < ts_query_capture_count(query->query); i++) {
@@ -267,7 +263,7 @@ extern "C"
         slots = scm_list_1(scm_from_utf8_symbol("data"));
         query_type = scm_make_foreign_object_type(name, slots, finalize_query);
 
-        scm_c_define_gsubr("parser-new", 0, 0, 0, (void*)zem_ts_parser_new);
+        scm_c_define_gsubr("parser-new", 1, 0, 0, (void*)zem_ts_parser_new);
         scm_c_define_gsubr("parser-parse-string", 2, 1, 0,
                            (void*)zem_ts_parser_parse_string);
         scm_c_define_gsubr("tree-root-node", 1, 0, 0,
@@ -281,7 +277,7 @@ extern "C"
                            (void*)zem_ts_query_cursor_set_byte_range);
         scm_c_define_gsubr("query-cursor-captures", 3, 0, 0,
                            (void*)zem_ts_query_cursor_captures);
-        scm_c_define_gsubr("query-new", 2, 0, 0, (void*)zem_ts_query_new);
+        scm_c_define_gsubr("query-new", 3, 0, 0, (void*)zem_ts_query_new);
 
         scm_c_export("parser-new", "parser-parse-string", "tree-root-node",
                      "tree-edit", "tree-changed-ranges", "query-cursor-new",

@@ -6,6 +6,8 @@
   #:use-module (ice-9 regex)
   #:export (enter-c++-mode))
 
+(load-extension "libguile-tree-sitter-cpp" "init_tree_sitter_cpp")
+
 (define-derived-mode c++-mode prog-mode "C++")
 
 (set! auto-mode-alist (cons `(,(make-regexp "\\.cpp\\'") . ,enter-c++-mode) auto-mode-alist))
@@ -147,6 +149,8 @@
 
 (add-hook! c++-mode-hook
            (lambda ()
+             (set! (local-var 'tree-sitter:language)
+                   (tree-sitter-language-cpp))
              (set! (local-var 'tree-sitter:highlight-patterns)
                    tree-sitter-highlight-patterns-cpp)
              (enter-tree-sitter-highlight-mode)))

@@ -47,13 +47,14 @@
 (define (ensure-highlight-query)
   (unless (local-var 'tree-sitter:highlight-query)
     (set! (local-var 'tree-sitter:highlight-query)
-          (query-new (local-var 'tree-sitter:highlight-patterns)
-                           highlight-query-capture-mapper)))
+          (query-new (local-var 'tree-sitter:language)
+                     (local-var 'tree-sitter:highlight-patterns)
+                     highlight-query-capture-mapper)))
   (local-var 'tree-sitter:highlight-query))
 
 (define-public (setup-buffer buffer)
   (with-buffer buffer
-    (let* ((parser (parser-new))
+    (let* ((parser (parser-new (local-var 'tree-sitter:language)))
            (tree (parser-parse-string parser (buffer-string))))
       (set! (local-var 'tree-sitter:parser) parser)
       (set! (local-var 'tree-sitter:tree) tree)
