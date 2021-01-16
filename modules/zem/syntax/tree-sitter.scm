@@ -72,6 +72,7 @@
                ((beg . end) (highlight-region (current-buffer) beg (point-max))))
               ranges)))
 
+
 (define-public (update-buffer buffer)
   (with-buffer buffer
     (let ((old-tree (local-var 'tree-sitter:tree)))

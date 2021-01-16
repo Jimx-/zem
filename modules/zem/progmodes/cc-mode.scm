@@ -10,7 +10,7 @@
 
 (define-derived-mode c++-mode prog-mode "C++")
 
-(set! auto-mode-alist (cons `(,(make-regexp "\\.cpp\\'") . ,enter-c++-mode) auto-mode-alist))
+(set! auto-mode-alist (cons `(,(make-regexp "\\.cpp\\'") . ,c++-mode) auto-mode-alist))
 
 (define tree-sitter-highlight-patterns-cpp
 "[\"break\"
@@ -153,4 +153,4 @@
                    (tree-sitter-language-cpp))
              (set! (local-var 'tree-sitter:highlight-patterns)
                    tree-sitter-highlight-patterns-cpp)
-             (enter-tree-sitter-highlight-mode)))
+             (tree-sitter-highlight-mode)))

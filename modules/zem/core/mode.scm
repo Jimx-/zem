@@ -8,10 +8,10 @@
   #:declarative? #f)
 
 (eval-when (expand load eval)
-           (define (derived-mode-proc-name child)
-             (string->symbol (string-append "enter-"
-                                            (symbol->string
-                                             child))))
+           (define (derived-mode-var-name child)
+             (string->symbol (string-append
+                              (symbol->string child)
+                              "-var")))
 
            (define (derived-mode-map-name child)
              (string->symbol (string-append
@@ -23,10 +23,10 @@
                               (symbol->string child)
                               "-hook")))
 
-           (define (minor-mode-proc-name mode)
-             (string->symbol (string-append "enter-"
-                                            (symbol->string
-                                             mode))))
+           (define (minor-mode-var-name mode)
+             (string->symbol (string-append
+                              (symbol->string mode)
+                              "-var")))
 
            (define (minor-mode-map-name mode)
              (string->symbol (string-append
@@ -60,26 +60,25 @@
     (syntax-case x ()
       ((_ child parent name body ...)
        (syntax-case (datum->syntax x
-                                   (list (derived-mode-proc-name (syntax->datum #'child))
+                                   (list (derived-mode-var-name (syntax->datum #'child))
                                          (derived-mode-map-name (syntax->datum #'child))
-                                         (derived-mode-hook-name (syntax->datum #'child))
-                                         (derived-mode-proc-name (syntax->datum #'parent))))
+                                         (derived-mode-hook-name (syntax->datum #'child))))
            ()
-         ((enter-mode map hook parent-proc)
+         ((mode-var map hook)
           #`(begin
               (define-derived-mode-map map)
 
-              (define-public child (make <mode> #:mode-name name #:mode-map map))
+              (define-public mode-var (make <mode> #:mode-name name #:mode-map map))
 
               (define-public hook (make-hook))
 
-              (define-interactive (enter-mode)
+              (define-interactive (child)
                 body ...
 
                 (when (not (eq? parent fundamental-mode))
-                  (parent-proc))
+                  (parent))
 
-                (set! (local-var 'major-mode) child)
+                (set! (local-var 'major-mode) mode-var)
                 (set! (local-var 'mode-name) name)
 
                 (unless (keymap-parent map)
@@ -93,24 +92,24 @@
     (syntax-case x ()
       ((_ mode init-value lighter body ...)
        (syntax-case (datum->syntax x
-                                   (list (minor-mode-proc-name (syntax->datum #'mode))
+                                   (list (minor-mode-var-name (syntax->datum #'mode))
                                          (minor-mode-map-name (syntax->datum #'mode))
                                          (minor-mode-hook-name (syntax->datum #'mode))
                                          (minor-mode-hook-on (syntax->datum #'mode))
                                          (minor-mode-hook-off (syntax->datum #'mode))
                                          (symbol->string (syntax->datum #'mode))))
            ()
-         ((enter-mode map hook hook-on hook-off pretty-name)
+         ((mode-var map hook hook-on hook-off pretty-name)
           #`(begin
               (define-derived-mode-map map)
 
-              (define-public mode (make <mode> #:mode-name lighter #:mode-map map))
+              (define-public mode-var (make <mode> #:mode-name lighter #:mode-map map))
 
               (define-public hook (make-hook))
               (define-public hook-on (make-hook))
               (define-public hook-off (make-hook))
 
-              (define-interactive (enter-mode #:optional arg)
+              (define-interactive (mode #:optional arg)
                 (when (not (local-var-bound? (quote mode)))
                   (set! (local-var (quote mode)) init-value))
 
@@ -127,7 +126,7 @@
                     (run-hook hook-on)
                     (run-hook hook-off))
 
-                (set! (buffer-modes (current-buffer)) (cons mode (buffer-modes (current-buffer))))
+                (set! (buffer-modes (current-buffer)) (cons mode-var (buffer-modes (current-buffer))))
 
                 (agenda-schedule
                  (let ((buffer (current-buffer)))
@@ -143,12 +142,12 @@
   (if (null? mode-lists)
       #f
       (match-let
-       (((rx . mode-proc) (car mode-lists)))
+       (((rx . mode) (car mode-lists)))
        (if (regexp-exec rx name)
-           mode-proc
+           mode
            (find-auto-mode name (cdr mode-lists))))))
 
 
 (define-public (set-auto-mode)
-  (let ((mode-proc (find-auto-mode (buffer-name) auto-mode-alist)))
-    (mode-proc)))
+  (let ((mode (find-auto-mode (buffer-name) auto-mode-alist)))
+    (mode)))
