@@ -85,6 +85,7 @@
     ((operator) style:operator-color)
     ((function) style:function-color)
     ((number) style:number-color)
+    ((comment) style:comment-color)
     (else style:text-color)))
 
 (define (draw-caret pos line-height)
@@ -244,7 +245,7 @@
 (define (draw-intervals view lines intervals line col tx ty text-x line-height hl-min cur-point point-line point-col last-end)
   (let ((lines-offset (lambda (pt)  ;; Map points to offsets within lines
                         (min (string-length lines)
-                             (max 0 (- (1+ pt) hl-min))))))
+                             (max 0 (- pt hl-min))))))
     (if (not (null? intervals))
         (match-let*
          ((((start . end) . props) (car intervals))

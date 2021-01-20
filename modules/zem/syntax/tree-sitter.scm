@@ -41,7 +41,10 @@
    ((or
      (string= name "type")
      (string= name "type.builtin")) 'type)
-   ((string= name "function") 'function)
+   ((or
+     (string= name "function")
+     (string= name "function.call")) 'function)
+   ((string= name "comment") 'comment)
    (else 'text)))
 
 (define (ensure-highlight-query)

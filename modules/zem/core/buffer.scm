@@ -27,7 +27,7 @@
       0))
 
 (define*-public (line-number-at-pos #:optional (pos (point)))
-  (count-lines (point-min) pos))
+  (max 1 (count-lines (point-min) pos)))
 
 (define-interactive (goto-line #:optional line)
   #t)

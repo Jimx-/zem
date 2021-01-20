@@ -25,7 +25,7 @@ static TSPoint extract_tspoint(SCM val)
 {
     TSPoint pt;
 
-    pt.row = scm_to_int(scm_car(val));
+    pt.row = scm_to_int(scm_car(val)) - 1;
     pt.column = scm_to_int(scm_cdr(val));
 
     return pt;
@@ -111,8 +111,8 @@ static SCM zem_ts_tree_changed_ranges(SCM s_old_tree, SCM s_new_tree)
     SCM result = scm_list_n(SCM_UNDEFINED);
     for (int i = length - 1; i >= 0; i--) {
         TSRange* range = &ranges[i];
-        SCM s_range = scm_cons(scm_from_uint32(range->start_byte),
-                               scm_from_uint32(range->end_byte));
+        SCM s_range = scm_cons(scm_from_uint32(range->start_byte + 1),
+                               scm_from_uint32(range->end_byte + 1));
 
         result = scm_cons(s_range, result);
     }
@@ -133,8 +133,8 @@ static SCM zem_ts_query_cursor_set_byte_range(SCM s_cursor, SCM s_beg,
                                               SCM s_end)
 {
     TSQueryCursor* cursor = (TSQueryCursor*)scm_foreign_object_ref(s_cursor, 0);
-    uint32_t beg = scm_to_uint32(s_beg);
-    uint32_t end = scm_to_uint32(s_end);
+    uint32_t beg = scm_to_uint32(s_beg) - 1;
+    uint32_t end = scm_to_uint32(s_end) - 1;
 
     ts_query_cursor_set_byte_range(cursor, beg, end);
 
@@ -172,8 +172,8 @@ static SCM zem_ts_query_cursor_captures(SCM s_cursor, SCM s_query, SCM s_node)
 
     SCM result = scm_list_n(SCM_UNDEFINED);
     for (int i = captures.size() - 1; i >= 0; i--) {
-        SCM pos = scm_cons(scm_from_uint32(captures[i].start),
-                           scm_from_uint32(captures[i].end));
+        SCM pos = scm_cons(scm_from_uint32(captures[i].start + 1),
+                           scm_from_uint32(captures[i].end + 1));
         result = scm_cons(scm_cons(pos, captures[i].tag), result);
     }
 

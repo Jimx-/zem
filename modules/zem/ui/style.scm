@@ -15,6 +15,7 @@
 (define-public type-color #x66d9ef)
 (define-public number-color #xae81ff)
 (define-public function-color #xa6e22e)
+(define-public comment-color #x404040)
 (define-public line-number-color #x404040)
 (define-public line-number-background-color #x202020)
 
