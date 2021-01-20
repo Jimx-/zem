@@ -385,7 +385,8 @@
                             point-line
                             point-col
                             0))
-           (draw-scrollbar view visible-line-min visible-line-max line-max)
+           (when (> line-max visible-line-max)
+             (draw-scrollbar view visible-line-min visible-line-max line-max))
            (draw-mode-line view-x mode-line-y view-width lh mode-line))))))
 
 (define-public (switch-buffer-view-buffer view buffer)

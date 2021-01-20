@@ -3,6 +3,7 @@
   #:use-module (emacsy emacsy)
   #:use-module (ice-9 match)
   #:use-module (ice-9 curried-definitions)
+  #:use-module (rnrs io ports)
   #:use-module (oop goops)
   #:use-module (srfi srfi-1))
 
@@ -31,15 +32,27 @@
 
 (define-interactive (goto-line #:optional line)
   #t)
-
 (define-interactive (goto-line #:optional (line (string->number
                                                  (read-from-minibuffer "Goto line: "))))
   (goto-char (point-min))
   (re-search-forward newline-regex #f #t (max 0 (- line 1))))
-
 (define-key global-map "M-g M-g" 'goto-line)
 
 (define (after-find-file)
   (set-auto-mode))
 
 (add-hook! find-file-hook after-find-file)
+
+(define-interactive (save-buffer #:optional arg)
+  (if (buffer-modified?)
+      (let ((filename (or (buffer-file-name (current-buffer))
+                          (expand-file-name (read-file-name "File to save in: ")))))
+        (call-with-output-file filename (lambda (port) (put-string port (buffer-string))))
+        (set! (buffer-modified? (current-buffer)) #f)
+        (agenda-schedule
+         (colambda ()
+                   (message "Wrote ~a" filename))))
+      (agenda-schedule
+       (colambda ()
+                 (message "(No changes need to be saved)")))))
+(define-key global-map "C-x C-s" 'save-buffer)
