@@ -2,12 +2,11 @@
 Extensible Emacs-like text editor with GNU Guile Scheme.
 
 #+HTML:<div align=center>
-#+HTML: <a href="https://github.com/Jimx-/zem"><img alt="screenshot" src="https://i.imgur.com/CLSWu7A.png"></a>
+#+HTML: <a href="https://github.com/Jimx-/zem"><img alt="screenshot" width="500" src="https://i.imgur.com/CLSWu7A.png"></a>
 #+HTML:</div>
 
 ** Features
-- Emacs-like editing
- ZEM uses [[https://savannah.nongnu.org/projects/emacsy][Emacsy]] to provide an Emacsy feel (keymaps, minibuffer with completion, major & minor modes, etc.). Default key bindings are the same as vanilla Emacs (e.g. ~C-x C-f~ for ~find-file~). For the complete list of supported commands, use ~M-x TAB~.
+- Emacs-like editing: ZEM uses [[https://savannah.nongnu.org/projects/emacsy][Emacsy]] to provide an Emacsy feel (keymaps, minibuffer with completion, major & minor modes, etc.). Default key bindings are the same as vanilla Emacs (e.g. ~C-x C-f~ for ~find-file~). For the complete list of supported commands, use ~M-x TAB~.
 - Fully hackable and extensible with [[https://www.gnu.org/software/guile/][GNU Guile]]
 - [[https://github.com/tree-sitter/tree-sitter][Tree-sitter]] based syntax highlighting (currently only C++ is supported)
 
