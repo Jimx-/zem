@@ -67,4 +67,6 @@
 
 (define-face highlight '((#t)))
 
-(define-face region '((#t :background 0x7f7f7f)))
+(define-face region '((#t :background #x7f7f7f)))
+
+(define-face minibuffer-prompt '((#t :foreground #x00ffff)))

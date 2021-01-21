@@ -2,7 +2,7 @@
 Extensible Emacs-like text editor with GNU Guile Scheme.
 
 #+HTML:<div align=center>
-#+HTML: <a href="https://github.com/Jimx-/zem"><img alt="screenshot" width="700" src="https://i.imgur.com/Qy0uF31.png"></a>
+#+HTML: <a href="https://github.com/Jimx-/zem"><img alt="screenshot" width="700" src="https://i.imgur.com/se21FyL.png"></a>
 #+HTML:</div>
 
 ** Features
