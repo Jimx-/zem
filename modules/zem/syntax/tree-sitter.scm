@@ -35,18 +35,18 @@
 
 (define (highlight-query-capture-mapper name)
   (cond
-   ((string= name "keyword") 'keyword)
-   ((string= name "number") 'number)
-   ((string= name "string") 'string)
-   ((string= name "operator") 'operator)
+   ((string= name "keyword") font-lock-keyword-face)
+   ((string= name "number") font-lock-constant-face)
+   ((string= name "string") font-lock-string-face)
+   ((string= name "operator") font-lock-keyword-face)
    ((or
      (string= name "type")
-     (string= name "type.builtin")) 'type)
+     (string= name "type.builtin")) font-lock-type-face)
    ((or
      (string= name "function")
-     (string= name "function.call")) 'function)
-   ((string= name "comment") 'comment)
-   (else 'text)))
+     (string= name "function.call")) font-lock-function-name-face)
+   ((string= name "comment") font-lock-comment-face)
+   (else 'default)))
 
 (define (ensure-highlight-query)
   (unless (local-var 'tree-sitter:highlight-query)
@@ -88,9 +88,9 @@
 
 (define (highlight-capture capture)
   (match capture
-         (((start . end) . tag)
+         (((start . end) . face)
           (when (not (= start end))
-            (put-text-property start end 'syntax tag)))))
+            (put-text-property start end 'face face)))))
 
 (define-public (highlight-region buffer beg end)
   (with-buffer buffer

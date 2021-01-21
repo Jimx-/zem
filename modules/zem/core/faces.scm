@@ -52,3 +52,19 @@
 (define-face bold '((#t :weight bold)))
 
 (define-face fixed-pitch '((#t)))
+
+(define-face line-number '((#t :inherit default)))
+
+(define-face line-number-current-line '((#t :inherit default)))
+
+(define-face mode-line '((#t :background #x757575)))
+
+(define-face cursor '((#t)))
+
+(define-face scroll-bar '((#t)))
+
+(define-face window-divider '((#t)))
+
+(define-face highlight '((#t)))
+
+(define-face region '((#t :background 0x7f7f7f)))

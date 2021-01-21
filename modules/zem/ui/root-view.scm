@@ -6,6 +6,7 @@
   #:use-module (zem ui minibuffer-view)
   #:use-module (zem ui buffer-view)
   #:use-module (zem core buffer)
+  #:use-module (zem core faces)
   #:use-module (ice-9 match)
   #:use-module (srfi srfi-9 gnu)
   #:use-module (srfi srfi-11)
@@ -132,7 +133,7 @@
      (view:draw (node-view node))
      (r:pop-clip-rect))
     ((hsplit vsplit)
-     (r:add-rect (node-pos node) (node-size node) style:divider-color)
+     (r:add-rect (node-pos node) (node-size node) (face-attribute 'window-divider ':background))
      (draw-node (node-left node))
      (draw-node (node-right node)))
     (else #f)))
@@ -170,7 +171,9 @@
 
 (define (make-root-view)
   (let* ((buffer-view (make <buffer-view>
-                        #:buffer (current-buffer)))
+                        #:buffer (begin
+                                   (find-file "../src/main.cpp")
+                                   (current-buffer))))
          (buffer-node (make-leaf-node '(0 . 0)
                                       '(0 . 0)
                                       buffer-view
@@ -214,10 +217,10 @@
 (define-method (view:draw (view <root-view>))
   (draw-node (root-node view))
 
-  (r:add-text style:font
+  (r:add-text (face-attribute 'fixed-pitch ':font)
               '(0 . 10)
               (format #f "FPS: ~,2f" (or ticks-per-second 1))
-              style:text-color))
+              (face-attribute 'default ':foreground)))
 
 (define-method (view:mouse-position-callback (view <root-view>) x y)
   (view:mouse-position-callback (active-view view) x y)

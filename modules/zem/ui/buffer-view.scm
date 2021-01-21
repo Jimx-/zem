@@ -4,6 +4,7 @@
   #:use-module (zem core buffer)
   #:use-module (zem core commands)
   #:use-module (zem core text-prop)
+  #:use-module (zem core faces)
   #:use-module (zem ui view)
   #:use-module (zem ui root-view)
   #:use-module ((zem ui style) #:prefix style:)
@@ -35,13 +36,14 @@
 (agenda-schedule toggle-caret (blink-period))
 
 (define (get-line-height)
-  (floor (* (f:get-font-height style:font) 1.1)))
+  (floor (* (f:get-font-height (face-attribute 'default ':font)) 1.1)))
 
 (define (get-text-y-offset)
-  (floor (/ (f:get-font-height style:font) 4.0)))
+  (floor (/ (f:get-font-height (face-attribute 'default ':font)) 4.0)))
 
 (define (get-text-x-offset line-max)
-  (match-let* (((w . _) (r:text-size-hint style:font (number->string line-max))))
+  (match-let* (((w . _) (r:text-size-hint (face-attribute 'line-number ':font #t)
+                                          (number->string line-max))))
               (+ w (floor (* 1.5 (car style:padding))))))
 
 (define (get-visible-line-range view line-max)
@@ -76,28 +78,22 @@
 (define (collect-line)
   (apply string (collect-line/recur)))
 
-(define (syntax->color syn)
-  (case syn
-    ((keyword special) style:keyword-color)
-    ((symbol) style:text-color)
-    ((string) style:string-color)
-    ((type) style:type-color)
-    ((operator) style:operator-color)
-    ((function) style:function-color)
-    ((number) style:number-color)
-    ((comment) style:comment-color)
-    (else style:text-color)))
+(define (face->foreground face)
+  (let ((foreground (face-attribute face ':foreground #t)))
+    (if (eq? foreground 'unspecified)
+        (face-attribute 'default ':foreground)
+        foreground)))
 
 (define (draw-caret pos line-height)
   (when show-caret?
-    (r:add-rect pos (cons style:caret-width line-height) style:caret-color)))
+    (r:add-rect pos (cons style:caret-width line-height) (face-attribute 'cursor ':foreground))))
 
 (define (draw-line-number num x y width)
-  (r:add-text style:font
+  (r:add-text (face-attribute 'line-number ':font #t)
               (cons x
                     (- y (get-text-y-offset)))
               (format #f (string-append "~" (number->string width) "@a") num)
-              style:line-number-color))
+              (face-attribute 'line-number ':foreground)))
 
 (define (intersect-selection view fragment start)
   (let ((selection (get-selection view))
@@ -111,18 +107,20 @@
                  (max 0 (min (- (car selection) start) len))
                  (max 0 (min (- (cdr selection) start) len))))))))
 
-(define (draw-word view line col x y word color line-height cur-point point-line point-col)
+(define (draw-word view line col x y word face line-height cur-point point-line point-col)
   (let ((draw-caret? (and (view:active? view)
                           (= line point-line)))
         (new-col (+ (string-length word) col))
         (new-point (+ (string-length word) cur-point))
-        (selection (intersect-selection view word cur-point)))
+        (selection (intersect-selection view word cur-point))
+        (font (face-attribute face ':font #t))
+        (foreground (face->foreground face)))
     (when selection
-      (let ((lx (car (r:text-size-hint style:font (substring word 0 (car selection)))))
-            (rx (car (r:text-size-hint style:font (substring word 0 (cdr selection))))))
+      (let ((lx (car (r:text-size-hint font (substring word 0 (car selection)))))
+            (rx (car (r:text-size-hint font (substring word 0 (cdr selection))))))
         (r:add-rect (cons (+ x lx) (- y line-height))
                     (cons (- rx lx) line-height)
-                    style:highlight2-color)))
+                    (face-attribute 'region ':background))))
     (when (and draw-caret?
                (>= point-col col)
                (< point-col new-col))
@@ -130,71 +128,61 @@
                    (head (substring word 0 split))
                    ((hx . _) (if (string-null? head)
                                  (cons 0 0)
-                                 (r:text-size-hint style:font head))))
+                                 (r:text-size-hint font head))))
                   (draw-caret (cons (+ x hx) (- y line-height))
                               line-height)))
     (list
      new-col
-     (car (r:add-text style:font
+     (car (r:add-text font
                       (cons x
                             (- y (get-text-y-offset)))
                       word
-                      color))
+                      foreground))
      new-point)))
 
 (define (draw-mode-line x y width height mode-line)
   (r:add-rect (cons x y)
               (cons width height)
-              style:mode-line-background-color)
-  (r:add-text style:font
+              (face-attribute 'mode-line ':background))
+  (r:add-text (face-attribute 'mode-line ':font #t)
               (cons (+ x (car style:padding))
                     (- (+ y height) (get-text-y-offset)))
               mode-line
-              style:text-color))
+              (face-attribute 'mode-line ':foreground)))
 
 
-(define (draw-text-fragment view line col x y fragment color x-min line-height cur-point point-line point-col)
+(define (draw-text-fragment view line col x y fragment face x-min line-height cur-point point-line point-col)
   (if (string-null? fragment)
       (list line col x y cur-point)
       (let ((nlidx (string-index fragment #\newline)))
-        (if nlidx
-            (match-let* ((word (substring fragment 0 (1+ nlidx)))
-                         (rest (substring fragment (1+ nlidx)))
-                         ((_ _ npoint) (draw-word view
+            (match-let* ((word (if nlidx
+                                   (substring fragment 0 (1+ nlidx))
+                                   fragment))
+                         ((new-col nx npoint) (draw-word view
                                                   line
                                                   col
                                                   x
                                                   y
                                                   word
-                                                  color
+                                                  face
                                                   line-height
                                                   cur-point
                                                   point-line
                                                   point-col)))
-                        (draw-text-fragment view
+                        (if nlidx
+                            (draw-text-fragment view
                                             (1+ line)
                                             0
                                             x-min
                                             (+ y line-height)
-                                            rest
-                                            color
+                                            (substring fragment (1+ nlidx))
+                                            face
                                             x-min
                                             line-height
                                             npoint
                                             point-line
-                                            point-col))
-            (match-let (((new-col nx npoint) (draw-word view
-                                                   line
-                                                   col
-                                                   x
-                                                   y
-                                                   fragment
-                                                   color
-                                                   line-height
-                                                   cur-point
-                                                   point-line
-                                                   point-col)))
-                       (list line new-col nx y npoint))))))
+                                            point-col)
+                            (list line new-col nx y npoint))))))
 
 (define (draw-gutter/recur view lidx visible-line-max line-max line-x text-x view-width y text-height view-y line-height point-line)
     (if (and (< (point) (point-max))
@@ -208,7 +196,7 @@
             ;; Highlight current line
             (r:add-rect (cons text-x (- line-y line-height))
                         (cons view-width line-height)
-                        style:highlight-color))
+                        (face-attribute 'highlight ':background)))
           (draw-line-number lidx
                             line-x
                             line-y
@@ -261,7 +249,7 @@
                                tx
                                ty
                                filler
-                               style:text-color
+                               'default
                                text-x
                                line-height
                                cur-point
@@ -275,7 +263,7 @@
                                fx
                                fy
                                text
-                               (syntax->color (plist-get props 'syntax))
+                               (plist-get props 'face)
                                text-x
                                line-height
                                fpoint
@@ -302,7 +290,7 @@
                             tx
                             ty
                             (substring lines last-end)
-                            style:text-color
+                            'default
                             text-x
                             line-height
                             cur-point
@@ -315,7 +303,9 @@
                (x (- (+ view-x view-width) style:scrollbar-size))
                (y (+ view-y (* view-height (/ visible-line-min line-max))))
                (h (max 20 (/ (- visible-line-max visible-line-min) line-max))))
-              (r:add-rect (cons x y) (cons style:scrollbar-size h) style:scrollbar-color)))
+              (r:add-rect (cons x y)
+                          (cons style:scrollbar-size h)
+                          (face-attribute 'scroll-bar ':foreground))))
 
 (define (move-to-visible-point-min view visible-line-min)
   (if (not (= visible-line-min (cdr (buffer-view:last-visible-point-min view))))
@@ -353,7 +343,7 @@
            ;; Draw background for gutter
            (r:add-rect (cons view-x view-y)
                        (cons text-x text-height)
-                       style:line-number-background-color)
+                       (face-attribute 'line-number ':background))
            ;; Iterate each line
            (match-let*
             (((hl-max . lines) (draw-gutter view
@@ -428,7 +418,7 @@
                              (collect-line))))
                (text-x (+ left
                           (get-text-x-offset line-max)))
-               (col (r:char-offset style:font line-text (- x text-x))))
+               (col (r:char-offset (face-attribute 'default ':font) line-text (- x text-x))))
               (forward-char col)
               (cons line col)))
 
