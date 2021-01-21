@@ -46,6 +46,7 @@
      (string= name "function")
      (string= name "function.call")) font-lock-function-name-face)
    ((string= name "comment") font-lock-comment-face)
+   ((string= name "function.macro") font-lock-preprocessor-face)
    (else 'default)))
 
 (define (ensure-highlight-query)

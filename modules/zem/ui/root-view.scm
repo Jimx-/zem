@@ -171,9 +171,7 @@
 
 (define (make-root-view)
   (let* ((buffer-view (make <buffer-view>
-                        #:buffer (begin
-                                   (find-file "../src/main.cpp")
-                                   (current-buffer))))
+                        #:buffer (current-buffer)))
          (buffer-node (make-leaf-node '(0 . 0)
                                       '(0 . 0)
                                       buffer-view
