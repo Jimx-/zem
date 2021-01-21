@@ -2,6 +2,7 @@
   #:use-module (zem core buffer)
   #:use-module (zem core text-prop)
   #:use-module (zem core mode)
+  #:use-module (zem core font-lock)
   #:use-module (zem progmodes cc-mode)
   #:use-module (ice-9 match)
   #:use-module (emacsy emacsy))
@@ -105,4 +106,5 @@
         (for-each highlight-capture captures)))))
 
 (define-minor-mode tree-sitter-highlight-mode #f "TreeSitter-Hl"
+  (font-lock-mode)
   (setup-buffer (current-buffer)))

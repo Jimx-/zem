@@ -1,6 +1,7 @@
 (define-module (zem core text-prop)
   #:use-module (zem util avl)
   #:use-module (zem util plist)
+  #:use-module (zem core faces)
   #:use-module (emacsy emacsy)
   #:use-module (ice-9 match)
   #:use-module (oop goops)

@@ -237,6 +237,8 @@ static void inner_main(void* data, int argc, char** argv)
     g_root_view = scm_call_0(SCM_VARIABLE_REF(
         scm_c_module_lookup(g_root_view_module, "make-root-view")));
 
+    scm_c_resolve_module("zem init");
+
     window_size_callback(main_window, 800, 600);
     glfwSetWindowSizeCallback(main_window, window_size_callback);
     glfwSetKeyCallback(main_window, key_callback);
