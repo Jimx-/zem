@@ -2,7 +2,7 @@
   #:use-module (zem api font)
   #:use-module (zem core faces)
   #:use-module (zem core font-lock)
-  #:use-module (zem themes monokai)
+  #:use-module (zem themes doom-one)
   #:use-module (emacsy emacsy))
 
 ;; (set! debug-on-error? #t)
