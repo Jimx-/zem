@@ -360,21 +360,27 @@
                                             point-line))
              (intervals (text-property-list (current-buffer)
                                             hl-min
-                                            hl-max)))
-            (draw-intervals view
-                            lines
-                            intervals
-                            visible-line-min
-                            0
-                            text-x
-                            lh
-                            text-x
-                            lh
-                            hl-min
-                            hl-min
-                            point-line
-                            point-col
-                            0))
+                                            hl-max))
+             ((_ _ _ end-y _) (draw-intervals view
+                                              lines
+                                              intervals
+                                              visible-line-min
+                                              0
+                                              text-x
+                                              lh
+                                              text-x
+                                              lh
+                                              hl-min
+                                              hl-min
+                                              point-line
+                                              point-col
+                                              0)))
+            (when (= line-max point-line)
+              ;; Draw caret and line highlight at EOB
+              (r:add-rect (cons text-x end-y)
+                          (cons view-width lh)
+                          (face-attribute 'highlight ':background))
+              (draw-word view point-line 0 text-x (+ end-y lh) " " 'default lh hl-max point-line point-col)))
            (when (> line-max visible-line-max)
              (draw-scrollbar view visible-line-min visible-line-max line-max))
            (draw-mode-line view-x mode-line-y view-width lh mode-line))))))
