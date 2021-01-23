@@ -19,18 +19,23 @@
 (define-class <buffer-view> (<view>)
   (buffer #:init-keyword #:buffer #:accessor buffer-view:buffer)
   (mouse-selecting? #:init-value #f #:accessor buffer-view:mouse-selecting?)
-  (last-point #:init-form '(0 . 1) #:accessor buffer-view:last-point)
-  (last-visible-point-min #:init-form '(0 . 1) #:accessor buffer-view:last-visible-point-min))
+  (last-point #:init-form '(0 1 0) #:accessor buffer-view:last-point)
+  (last-visible-point-min #:init-form '(0 . 1) #:accessor buffer-view:last-visible-point-min)
+  (display-matrix #:init-form '() #:accessor buffer-view:display-matrix)
+  (suppressed-cursor-move? #:init-value #f #:accessor buffer-view:suppressed-cursor-move?))
 
 (define-method (initialize (view <buffer-view>) . args)
   (next-method)
   (set! (view:cursor view) 'i-beam))
 
+(define* (seconds->ticks seconds #:optional (default-ticks #f))
+  (if ticks-per-second
+      (* seconds ticks-per-second)
+      default-ticks))
+
 (define show-caret? #f)
 (define (blink-period)
-  (if ticks-per-second
-      (* 0.5 ticks-per-second)
-      1))
+  (seconds->ticks 0.5 1))
 (define (toggle-caret)
   (set! show-caret? (not show-caret?))
   (agenda-schedule toggle-caret (blink-period)))
@@ -132,13 +137,14 @@
 
 ;; Draw a single interval fontified by `put-text-property'.
 (define (draw-interval view line col x y word face line-height cur-point point-line point-col)
-  (let ((draw-caret? (and (view:active? view)
-                          (= line point-line)))
-        (new-col (+ (string-length word) col))
-        (new-point (+ (string-length word) cur-point))
-        (selection (intersect-selection view word cur-point))
-        (font (face-attribute face ':font #t))
-        (foreground (face->foreground face)))
+  (let* ((draw-caret? (and (view:active? view)
+                           (= line point-line)))
+         (new-col (+ (string-length word) col))
+         (new-point (+ (string-length word) cur-point))
+         (selection (intersect-selection view word cur-point))
+         (font (face-attribute face ':font #t))
+         (foreground (face->foreground face))
+         (pos (cons x (- y (get-text-y-offset font)))))
     (when selection
       (let ((lx (car (r:text-size-hint font (substring word 0 (car selection)))))
             (rx (car (r:text-size-hint font (substring word 0 (cdr selection))))))
@@ -158,14 +164,14 @@
     (list
      new-col
      (car (r:add-text font
-                      (cons x
-                            (- y (get-text-y-offset font)))
+                      pos
                       word
                       foreground))
-     new-point)))
+     new-point
+     (list pos font word))))
 
 ;; Draw all intervals (including filler text between intervals) in a line.
-(define (draw-intervals view line intervals lidx col tx ty text-x line-height line-beg cur-point point-line point-col last-end)
+(define (draw-intervals view line intervals lidx col tx ty text-x line-height line-beg cur-point point-line point-col last-end row-acc)
   (let ((line-offset (lambda (pt)  ;; Map points to offsets within lines
                        (min (string-length line)
                             (max 0 (- pt line-beg))))))
@@ -176,16 +182,18 @@
           (token-max (line-offset end))
           (filler (substring line last-end token-min))
           (text (substring line token-min token-max))
-          ((fcol fx fpoint)
+          ((fcol fx fpoint felt)
            ;; Draw filler text between the previous and the current interval
            (draw-interval view lidx col tx ty filler 'default line-height cur-point point-line point-col))
-          ((ncol nx npoint)
+          ((ncol nx npoint nelt)
            ;; Draw the current interval
            (draw-interval view lidx fcol fx ty text (plist-get props 'face) line-height fpoint point-line point-col)))
          ;; Draw next line
-         (draw-intervals view line (cdr intervals) lidx ncol nx ty text-x line-height line-beg npoint point-line point-col token-max))
+         (draw-intervals view line (cdr intervals) lidx ncol nx ty text-x line-height line-beg npoint point-line point-col token-max (cons nelt (cons felt row-acc))))
         ;; Draw text at the end
-        (draw-interval view lidx col tx ty (substring line last-end) 'default line-height cur-point point-line point-col))))
+        (match-let
+         (((_ _ _ elt) (draw-interval view lidx col tx ty (substring line last-end) 'default line-height cur-point point-line point-col)))
+          (cons elt row-acc)))))
 
 (define (draw-line view lidx line line-beg line-max line-x text-x view-width y view-y point-line point-col)
   (let* ((line-end (+ line-beg (string-length line)))
@@ -208,19 +216,20 @@
                       line-x
                       line-y
                       (string-length (number->string line-max)))
-    (draw-intervals view (string-append line " ") intervals lidx 0 text-x line-y text-x line-height line-beg line-beg point-line point-col 0)
-    line-height))
+    (let ((row (draw-intervals view (string-append line " ") intervals lidx 0 text-x line-y text-x line-height line-beg line-beg point-line point-col 0 '())))
+      (cons line-height (cons line-y (reverse row))))))
 
-(define (draw-lines view lidx visible-line-max line-max line-x text-x view-width y text-height view-y point-line point-col)
+(define (draw-lines view lidx visible-line-max line-max line-x text-x view-width y text-height view-y point-line point-col matrix-acc)
   (if (and (< (point) (point-max))
            (< y text-height)
            (<= lidx visible-line-max))
-      (let* ((line-beg (point))
-             (line (collect-line))
-             (line-height
-             (draw-line view lidx line line-beg line-max line-x text-x view-width y view-y point-line point-col)))
-        (draw-lines view (1+ lidx) visible-line-max line-max line-x text-x view-width (+ y line-height) text-height view-y point-line point-col))
-      y))
+      (match-let*
+       ((line-beg (point))
+        (line (collect-line))
+        ((line-height . row)
+         (draw-line view lidx line line-beg line-max line-x text-x view-width y view-y point-line point-col)))
+       (draw-lines view (1+ lidx) visible-line-max line-max line-x text-x view-width (+ y line-height) text-height view-y point-line point-col (cons row matrix-acc)))
+      (cons y matrix-acc)))
 
 (define (draw-scrollbar view visible-line-min visible-line-max line-max)
   (match-let* (((view-x . view-y) (view:pos view))
@@ -248,15 +257,14 @@
       (buffer-view:buffer view)
     (when (not (= (point) (car (buffer-view:last-point view))))
       (update-point view))
-    (let ((point-line (max 1 (cdr (buffer-view:last-point view))))
-          (point-col (current-column))
+    (let ((point-line (max 1 (cadr (buffer-view:last-point view))))
+          (point-col (caddr (buffer-view:last-point view)))
           (mode-line (emacsy-mode-line)))
       (save-excursion
           (match-let*
            (((view-x . view-y) (view:pos view))           ;; View position
             ((view-width . view-height) (view:size view)) ;; View size
-            (lh (get-line-height-default))                        ;; Line height in pixels
-            (text-height (- view-height lh))              ;; Text area height
+            (text-height view-height)              ;; Text area height
             (line-max                                     ;; Last line of buffer
              (count-lines (point-min) (point-max)))       ;;
             ((visible-line-min . visible-line-max)        ;; Visible line range
@@ -270,10 +278,12 @@
                        (cons text-x text-height)
                        (face-attribute 'line-number ':background))
            ;; Iterate each line
-           (let ((end-y (draw-lines view visible-line-min visible-line-max line-max line-x text-x view-width 0 text-height view-y point-line point-col)))
-             (when (and (= line-max point-line)
-                        (zero? point-col))
-               (draw-line view line-max " " (point-max) line-max line-x text-x view-width end-y view-y point-line point-col)))
+           (match-let
+            (((end-y . matrix) (draw-lines view visible-line-min visible-line-max line-max line-x text-x view-width 0 text-height view-y point-line point-col '())))
+            (set! (buffer-view:display-matrix view) (reverse matrix))
+            (when (and (= line-max point-line)
+                       (zero? point-col))
+              (draw-line view line-max " " (point-max) line-max line-x text-x view-width end-y view-y point-line point-col)))
            (when (> line-max visible-line-max)
              (draw-scrollbar view visible-line-min visible-line-max line-max))
            (draw-mode-line view-x (+ view-y view-height) view-width mode-line))))))
@@ -283,7 +293,7 @@
 
 (define (scroll-to-point view)
   (let* ((size (view:size view))
-         (point-line (cdr (buffer-view:last-point view)))
+         (point-line (cadr (buffer-view:last-point view)))
          (y-min (* (get-line-height-default) (- point-line 2)))
          (y-max (- (* (get-line-height-default) (+ point-line 5)) (cdr size)))
          (scroll-target (view:scroll-target view)))
@@ -292,8 +302,8 @@
                 (max y-max (min y-min (cdr scroll-target)))))
     point-line))
 
-(define (update-point view)
-  (set! (buffer-view:last-point view) (cons (point) (line-number-at-pos))))
+(define* (update-point view #:optional (point (point)) (line (line-number-at-pos)) (col (current-column)))
+  (set! (buffer-view:last-point view) (list point line col)))
 
 (define-method (view:update (view <buffer-view>) delta)
   (with-buffer (buffer-view:buffer view)
@@ -302,32 +312,70 @@
       (scroll-to-point view)))
   (next-method))
 
+(define (resolve-line-offset elts x)
+  (let loop ((elts elts)
+             (col 0))
+    (match elts
+           ((cur next rest ...)
+            (match-let
+             ((((x0 . _) font word) cur)
+              (((x1 . _) _ _) next))
+             (if (and (<= x0 x)
+                      (< x x1))
+                 (+ col
+                    (r:char-offset font word (- x x0)))
+                 (loop (cdr elts)
+                       (+ col (string-length word))))))
+           ((cur)
+            (match-let
+             ((((x0 . _) font word) cur))
+                 (+ col
+                    (r:char-offset font word (- x x0)))))
+           (else col))))
+
+(define (resolve-screen-position view x y)
+  (match-let
+   (((rel-line . col)
+     (let loop ((matrix (buffer-view:display-matrix view))
+                (rel-line 0))
+       (if (null? matrix)
+           (cons rel-line 0)
+           (let* ((row (car matrix))
+                  (line-y (car row))
+                  (elts (cdr row)))
+             (if (>= line-y y)
+                 (cons rel-line (resolve-line-offset elts x))
+                 (loop (cdr matrix)
+                       (1+ rel-line))))))))
+   (cons (+ (cdr (buffer-view:last-visible-point-min view)) rel-line)
+         col)))
+
 (define (move-point-to view x y)
-  (match-let* (((left . top) (view:pos view))
-               (line-max (count-lines (point-min) (point-max)))
-               ((visible-line-min . _) (get-visible-line-range view line-max))
-               (line (+ visible-line-min
-                        (inexact->exact
-                             (floor (/ (- y top)
-                                       (get-line-height-default))))))
-               (line-text (begin
-                            (goto-line line)
-                            (move-beginning-of-line)
-                            (save-excursion
-                             (collect-line))))
-               (text-x (+ left
-                          (get-text-x-offset line-max)))
-               (col (r:char-offset (face-attribute 'default ':font) line-text (- x text-x))))
-              (forward-char col)
-              (cons line col)))
+  (match-let (((_ last-line last-col) (buffer-view:last-point view))
+              ((line . col) (resolve-screen-position view x y)))
+             (when (or (not (= last-line line))
+                       (not (= last-col col)))
+               (goto-line line)
+               (move-beginning-of-line)
+               (forward-char (min col (1- (line-length))))
+               (update-point view (point) line (current-column)))
+             (cons line col)))
 
 (define-method (view:mouse-position-callback (view <buffer-view>) x y)
-  (when (buffer-view:mouse-selecting? view)
+  (when (and (buffer-view:mouse-selecting? view)
+             (not (buffer-view:suppressed-cursor-move? view)))
     (with-buffer (buffer-view:buffer view)
                  (let ((old-point (point)))
                    (move-point-to view x y)
                    (unless (eq? (point) old-point)
-                     (set! (buffer-view:mouse-selecting? view) 'moved))))))
+                     (set! (buffer-view:mouse-selecting? view) 'moved))
+
+                   ;; Need some rate limiting because the whole goto-line thing is too damn slow.
+                   (set! (buffer-view:suppressed-cursor-move? view) #t)
+                   (agenda-schedule
+                     (lambda ()
+                       (set! (buffer-view:suppressed-cursor-move? view) #f))
+                       (seconds->ticks 0.05 1))))))
 
 (define-method (view:mouse-press-callback (view <buffer-view>) button x y)
   (case button
