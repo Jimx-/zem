@@ -1,0 +1,61 @@
+#+COMMENT:                                                            -*- org -*-
+#+TITLE: About Emacsy
+
+#+SUBTITLE: an embeddable Emacs-like library using GNU Guile
+
+Emacsy is an embeddable Emacs-like library using [[http://www.gnu.org/software/guile/][GNU Guile Scheme]].  It
+was a [[http://www.kickstarter.com/projects/568774734/emacsy-an-embeddable-emacs/?ref=kicktraq][kickstarter project]], and it also was a [[https://google-melange.appspot.com/gsoc/proposal/review/google/gsoc2013/shanecelis/1][Google Summer of Code 2013 project]].
+
+I will be working with Ludovic Courtès from the [[http://www.gnu.org/gnu/thegnuproject.html][GNU Project]].  Keep
+abreast of its development by watching this repository or following me
+on twitter [@shanecelis](https://twitter.com/shanecelis).
+
+Get it
+#+BEGIN_EXAMPLE
+    git clone https://git.savannah.nongnu.org/git/emacsy.git
+#+END_EXAMPLE
+
+build it
+#+BEGIN_EXAMPLE
+    guix environment -l guix.scm
+    ./autogen.sh
+    ./configure
+    make
+    ./pre-inst-env hello-emacsy
+#+END_EXAMPLE
+
+and
+
+#+BEGIN_EXAMPLE
+    ./pre-inst-env emacsy-webkit-gtk
+#+END_EXAMPLE
+
+To build a minimal Emacsy, perhaps packaging it for a new distro:
+#+BEGIN_EXAMPLE
+    ./autogen.sh
+    ./configure --with-examples=no
+    make
+#+END_EXAMPLE
+
+Emacsy is free software, it is distributed under the terms of the GNU
+General Public Licence version 3 or later.  See the file [[file:COPYING][COPYING]].
+
+* WARNING/Usage
+
+This project is currently in development.  It is as alpha as can be.
+Not meant for general consumption yet.  Contributors, welcome!
+
+Emacsy usage is being explored in the [[https://www.nongnu.org/nomad/][Nomad extensible web browser]] and
+in [[https://gitlab.com/janneke/guimax][Guimax]]
+
+* Bugs
+
+    Please send Emacsy bug reports to [[mailto:guile-user@gnu.org][guile-user@gnu.org]].
+
+* legalese
+Copyright © 2012, 2013 Shane Celis <shane.celis@gmail.com>
+Copyright © 2019 Jan (janneke) Nieuwenhuizen <janneke@gnu.org>
+
+  Copying and distribution of this file, with or without modification,
+  are permitted in any medium without royalty provided the copyright
+  notice and this notice are preserved.

@@ -1,0 +1,69 @@
+                                                              -*- org -*-
+#+TITLE: Emacsy NEWS – history of user-visible changes
+#+STARTUP: content hidestars
+
+Copyright © 2019 Jan (janneke) Nieuwenhuizen <janneke@gnu.org>
+
+  Copying and distribution of this file, with or without modification,
+  are permitted in any medium without royalty provided the copyright
+  notice and this notice are preserved.
+
+Please send Emacsy bug reports to guile-user@gnu.org.
+
+* Changes in 0.4.1 since 0.4
+** Core
+*** A missing export for `lookup-key' has been added.
+** Distribution
+*** The tarball release includes the test suite again.
+* Changes in 0.4 since 0.3
+** Distribution
+*** Emacsy moved to http://savannah.nongnu.org/projects/emacsy
+*** Missing copyright and Licence headers have been added.
+*** A ChangeLog is now generated from the commit messages.
+** Core
+*** <text-buffer> now supports full text editng beyond minibuffer.
+*** The minibuffer now supports file-name completion.
+*** ‘kill-buffer’ is now safe.
+**** 15 New commands:
+backard-kill-word, exchange-point-and-mark, find-file, kill-line,
+kill-region, kill-word, mark-whole-buffer, move-beginning-of-line,
+move-end-of-line, new-buffer, next-line, previous-line,
+set-mark-command, yank, yank-pop.
+**** 18 New functions:
+backard-line, beginning-of-line, buffer-next!, buffer-previous!,
+buffer-substring, contract-file-name, current-column, delete-line,
+delete-region, end-of-line, expand-file-name,
+file-name-completion-function forward-line, line-length, mark,
+other-buffer!, save-excursion, set-mark.
+**** 5 New variables:
+default-directory, fundamental-map, fundamental-mode, kill-ring,
+scratch.
+** Noteworthy bug fixes
+*** next-buffer and previous-buffer now have Emacs semantics.
+* Changes in 0.3 since 0.2
+** Distribution
+*** Noweb has been removed, source code is been promoted to canonical source.
+*** Copyright and license notices have been added.
+*** Hello and WebKitGTK Examples are now part of Emacsy.
+*** Documentation is now available in GNU texinfo.
+*** Emacsy now uses GNU style READMEs.
+*** The build has been rewritten and is now non-recursive.
+* Changes in 0.2 since 0.1.3
+** Core
+*** Emacsy now has a Guix package and is released with GNU Guix.
+*** Emacsy now supports Guile 2.2, Gtk+3, WebKit2Gtk-4.0.
+*** Emacsy is less noisy, again.
+** C API
+*** The C API now uses the EMACSY_ prefix C constants (WAS: EY_).
+* Changes in 0.1.3 since 0.1.2
+** Core
+*** Emacsy now supports universal argument (C-u ...).
+*** Emacsy now supports a non-interactive batch mode.
+*** Emacsy now uses Guile-2d's coroutines and agenda.
+*** Emacsy is less noisy.
+*** Emacsy now has a self-doc interface.
+** Scheme API
+*** emacsy-initialize now takes a boolean: emacsy-interactive?.
+** C API
+*** The C API now uses the EMACSY_ prefix C constants (WAS: EY_).
+*** emacsy_initialize now takes flags: EMACSY_INTERACTIVE EMACSY_NON_INTERACTIVE.

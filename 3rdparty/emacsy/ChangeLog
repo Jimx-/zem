@@ -1,0 +1,12 @@
+                                                              -*- org -*-
+
+#+TITLE: ChangeLog
+
+Copyright © 2019 Jan (janneke) Nieuwenhuizen <janneke@gnu.org>
+
+  Copying and distribution of this file, with or without modification,
+  are permitted in any medium without royalty provided the copyright
+  notice and this notice are preserved.
+
+Normally a ChangeLog is generated at "make dist" time and available in
+source tarballs.

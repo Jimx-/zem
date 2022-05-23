@@ -1,0 +1,60 @@
+#+COMMENT:                                                            -*- org -*-
+#+TITLE: Hacking Emacsy
+
+* Committing
+
+Please write commit logs in the [[info:Standards#Change%20Logs][ChangeLog]] format, you can check the
+commit history for examples.
+
+* Documentation/API/Noweb
+
+In 0.3 Noweb was removed; the code was split into pure Guile scheme
+source code and separate texinfo documentation.  This setup is now
+functional and needs lots of work and cleaning up.
+
+The API-documentation is being snarfed using [[file:scripts/doc-snarf.scm][scripts/doc-snarf.scm]], a
+heavily hacked version of the script that comes with Guile.  See the
+script for some minimal documentation of how it works and what it does.
+
+Use `make doc-snarf' to update the snarfed documentation.
+
+The miminal, empty comment that doc-snarf uses to generate
+API-documentation for a function is ;;., like so
+
+#+BEGIN_EXAMPLE
+    ;;.
+    (define (undocumented-api-function) ... )
+#+END_EXAMPLE
+
+Using the empty description is a placeholder, we will need some actual
+documentation in the comment there.  The original doc-snarf uses
+whitespace for that.  That does not work for us; we have Emacs remove
+trailing whitespace from our code.
+
+We still have to figure out exactly how to do this as we probably want
+the same documentation to be available via the self-documenting Emacsy
+help system.  Have doc-snarf (also) parse docstrings?
+
+* Texlive
+
+If you are not building a release or checking that the PDF documentation
+still builds, you may want to setup a Guix environment without texlive
+(a ~4GB download).  Try something like
+
+#+BEGIN_EXAMPLE
+    guix environment -l guix.scm --with-input=texlive=coreutils
+#+END_EXAMPLE
+
+* Example Usage
+
+Emacsy usage is being explored in the [[https://savannah.nongnu.org/projects/nomad][Nomad extensible web browser]] and
+in [[https://gitlab.com/janneke/guimax][Guimax]]
+
+    Please send Emacsy bug reports to [[mailto:guile-user@gnu.org][guile-user@gnu.org]].
+
+* Legalese
+Copyright © 2019 Jan (janneke) Nieuwenhuizen <[[mailto:janneke@gnu.org][janneke@gnu.org]]>
+
+  Copying and distribution of this file, with or without modification,
+  are permitted in any medium without royalty provided the copyright
+  notice and this notice are preserved.

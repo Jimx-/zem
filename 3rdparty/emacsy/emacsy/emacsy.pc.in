@@ -1,0 +1,12 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: Emacsy
+Description: An Emacs-like Library for GNU Guile Scheme
+URL: https://savannah.nongnu.org/projects/emacsy
+Version: @VERSION@
+Requires: guile-@GUILE_EFFECTIVE_VERSION@
+Libs: -L${libdir} -lemacsy
+Cflags: -I${includedir}

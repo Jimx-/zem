@@ -1,0 +1,838 @@
+\input texinfo
+@c -*- mode: texinfo; -*-
+
+@c %**start of header
+@setfilename emacsy.info
+@documentencoding UTF-8
+@settitle Emacsy Reference Manual
+@c %**end of header
+
+@include version.texi
+
+@c Identifier of the OpenPGP key used to sign tarballs and such.
+@set OPENPGP-SIGNING-KEY-ID 1A858392E331EAFDB8C27FFBF3C1A0D9C1D65273
+
+@copying
+Copyright @copyright{} 2012, 2013 Shane Celis@*
+Copyright @copyright{} 2019 Jan (janneke) Nieuwenhuizen@*
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3 or
+any later version published by the Free Software Foundation; with no
+Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.  A
+copy of the license is included in the section entitled ``GNU Free
+Documentation License''.
+@end copying
+
+@dircategory Software development
+@direntry
+* Emacsy: (emacsy).       An embeddable Emacs-like library using GNU Guile.
+@end direntry
+
+@titlepage
+@title Emacsy Reference Manual
+@subtitle An embeddable Emacs-like library using GNU Guile.
+@author Shane Celis
+
+@page
+@vskip 0pt plus 1filll
+Edition @value{EDITION} @*
+@value{UPDATED} @*
+
+@insertcopying
+@end titlepage
+
+@contents
+
+@c *********************************************************************
+@node Top
+@top Emacsy
+
+This document describes Emacsy version @value{VERSION}, An embeddable
+Emacs-like library using GNU Guile.
+
+@menu
+* Preface::
+* Introduction::
+* The Garden::
+* Installation::                Installing Emacsy.
+* Hello Emacsy::
+* Api::
+* Contributing::                Your help needed!
+* Acknowledgments::             Thanks!
+* Resources::
+* GNU Free Documentation License::  The license of this manual.
+* Programming Index::           Data types, functions, and variables.
+* Keyboard command Index::      Keyboard commands.
+* Concept Index::               Concepts.
+
+@detailmenu
+ --- The Detailed Node Listing ---
+
+Introduction
+
+* Vision::
+
+Vision
+
+* Motivation::
+* Overlooked Treasure::
+* Emacsy::
+* Goals::
+* Anti-goals::
+* Emacsy Features::
+
+Installation
+
+* Requirements::                Software needed to build and run Emacsy.
+* Running the Test Suites::     Testing Emacsy.
+
+Hello Emacsy
+
+* Embedder's API::              Unlimited power.
+* The Simplest Application Ever::  Hello Emacsy!
+* Conclusion::                  And now what?
+* Plaintext Please::            Use the Source.
+
+Api
+
+* C Api::
+* Emacsy Facade::
+* Event::
+* Keymap::
+* Command::
+* Block::
+* KLECL::                  Key-Lookup-Execute-Command-Loop
+* Kbd-Macro::              Keyboard Macros
+* Buffer::
+* Text::
+* Minibuffer::
+* Core::
+* Advice::
+* Window::                 Window module (optional)
+* Help::
+* Self-doc::               Self-documentation
+
+Contributing
+
+* Building from Git::           The latest and greatest.
+* Running Emacsy From the Source Tree::  Hacker tricks.
+* The Perfect Setup::           The right tools.
+* Coding Style::                Hygiene of the contributor.
+* Submitting Patches::          Share your work.
+
+@end detailmenu
+@end menu
+
+@c *********************************************************************
+@node Preface
+@unnumbered Preface
+
+This project is an experiment, actually two experiments.  Firstly, it's
+an experiment to see whether there's any interest and utility in an
+embeddable Emacs-like environment.  Secondly, I'd like to see how
+literate programming fares in comparison to the conventional approach.
+Let me elaborate a little on each.
+
+Emacs is the extensible programmer's text editor.  For decades, it's
+gobbled up functionality that sometimes seems far removed from text
+editing.  I will expand upon why I believe this is the case and what
+particular functionality I hope to replicate later.  I'd like to
+discuss a little about why I'm bothering to start with Emacs rather
+than just writing something entirely new. Emacs has fostered a
+community of people that are comfortable using, customising, and
+extending Emacs while its running.  The last part is most important in
+my mind.  Extending Emacs is a natural part of its use; it's a
+tinkerer's dream toy.  And I want to grease the rails for people who
+already @emph{get} what kind of tool I'm trying to provide.  Had I
+chosen another perfectly competent language like Lua instead of a
+Lisp, that would erect a barrier to that track.  Were I to write a
+completely different API, that's yet another barrier.  Were I to
+``modernize'' the terminology used by Emacs, e.g., say ``key
+shortcut'' instead of ``key binding'', or ``window'' instead of
+``frame'', that's a barrier to drawing the community of people that
+already @emph{get it} to try this out.
+
+Let me say a little about why I'm choosing to do this as a literate
+program@footnote{Emacsy has since been converted from a literate noweb
+program to plain Guile Scheme and this Info document}.  I've written a
+lot of code, none of which was written literately.  Recently I had an
+experience that made me want to try something different. I began a group
+project.  There wasn't @emph{that} much code.  Yet not too far into the
+project, it had become opaque to one of the original contributors.  This
+was a small codebase with someone who was there from the start, and
+already we were having problems.  Maybe the code was bad.  Maybe we were
+bad programmers (Eek!).  Whatever the case, assuming there's no simple
+fix for opaque code, it is something that can be addressed.  Better
+communication about the code may help.  So I would like to invest a good
+faith effort in attempting to write this program in a literate fashion.
+
+A few notes on my personal goals for this document and the code.  The
+writing style I'm leaving as informal for purposes of expediency and
+lowering the barrier of contribution.  Also for expediency, my initial
+interest is in fleshing out the functionality.  I'm not concerned
+about optimality of the implementation yet.  Only in cases where the
+design cannot be reimplemented to be more efficient would I be
+concerned.  If we can make a useable system, optimization will follow
+and hopefully be informed by profiling.
+
+There's a ton of work left to do!  Please feel free to contribute to
+the effort.
+
+
+@c Some might say, ``Good code isn't opaque.  Good code is transparent.
+@c Good code can be concisely described with the appropriate design
+@c patterns.''
+
+@node Introduction
+@chapter Introduction
+
+@c What's the logo?  How about a gnu inside some other creature?
+@c Think an O'Reily animal with a gnu inside it.
+
+Emacsy is inspired by the Emacs text editor, but it is not an attempt
+to create another text editor. This project "extracts" the kernel of
+Emacs that makes it so extensible.  There's a joke that Emacs is a
+great operating system---lacking only a decent editor. Emacsy is the
+Emacs OS sans the text editor.  Although Emacsy shares no code with
+Emacs, it does share a vision.  This project is aimed at Emacs users
+and software developers.
+
+@menu
+* Vision::
+@end menu
+
+@node Vision
+@section Vision
+
+Emacs has been extended to do much more than text editing.  It can get
+your email, run a chat client, do video
+editing@footnote{@url{http://1010.co.uk/gneve.html}}, and more.  For
+some the prospect of chatting from within one's text editor sounds
+weird.  Why would anyone want to do that?  Because Emacs gives them so
+much control.  Frustrated by a particular piece of functionality?
+Disable it.  Unhappy with some unintuitive key binding?  Change it.
+Unimpressed by built-in functionality?  Rewrite it.  And you can do
+all that while Emacs is running.  You don't have to exit and
+recompile.
+
+The purpose of Emacsy is to bring the Emacs way of doing things to
+other applications natively. In my mind, I imagine Emacs consuming
+applications from the outside, while Emacsy combines with applications
+from the inside---thereby allowing an application to be Emacs-like
+without requiring it to use Emacs as its frontend. I would like to hit
+\verb|M-x| in other applications to run commands. I would like to see
+authors introduce a new version: ``Version 3.0, now extendable with
+Emacsy.'' I would like hear power users ask, ``Yes, but is it Emacsy?''
+
+@menu
+* Motivation::
+* Overlooked Treasure::
+* Emacsy::
+* Goals::
+* Anti-goals::
+* Emacsy Features::
+@end menu
+
+@node Motivation
+@subsection Motivation
+
+This project was inspired by my frustration creating interactive
+applications with the conventional edit-run-compile style of
+development. Finding the right abstraction for the User Interface (UI)
+that will compose well is not easy. Additionally, If the application
+is a means to an end and not an end in itself (which is common for
+academic and in-house tools), then the UI is usually the lowest
+development priority.  Changing the UI is painful, so often mediocre
+UIs rule.  Emacsy allows the developer---or the user---to reshape and
+extend the UI and application easily at runtime.
+
+@c@figure
+@c  \centering
+@c  @image{images/emacsy-logo,,,,.pdf}
+  @image{images/emacsy-logo,,,,.png}
+@c  \caption[Short Label]{\label{emacsy-logo}The proposed logo features
+@c    a small gnu riding an elephant.}
+@c@end figure
+
+@node Overlooked Treasure
+@subsection Overlooked Treasure
+@c @anchor{Overlooked Treasure}
+
+Emacs has a powerful means of programmatically extending itself while
+it is running.  Not many successful applications can boast of that,
+but I believe a powerful idea within Emacs has been overlooked as an
+Emacsism rather than an idea of general utility.  Let me mention
+another idea that might have become a Lispism but has since seen
+widespread adoption.
+
+The Lisp programming language introduced the term Read-Eval-Print-Loop
+(REPL, pronounced rep-pel), an interactive programming feature present
+in many dynamic languages: Python, Ruby, MATLAB, Mathematica, Lua to
+name a few.  The pseudo code is given below.
+
+<<Lisp REPL>>=
+(while #t
+ (print (eval (read))))
+@ The REPL interaction pattern is to enter one complete expression, hit
+the return key, and the result of that expression will be displayed.
+It might look like this:
+
+@verbatim
+> (+ 1 2)
+3
+@end verbatim
+
+The kernel of Emacs is conceptually similar to the REPL, but the level
+of interaction is more fine grained.  A REPL assumes a command line
+interface.  Emacs assumes a keyboard interface.  I have not seen the
+kernel of Emacs exhibited in any other applications, but I think it is
+of similar utility to the REPL---and entirely separate from text
+editing.  I'd like to name this the Key-Lookup-Execute-Command-Loop
+(KLECL, pronounced clec-cull).
+
+@node Emacsy
+@subsection Emacsy
+
+Long-time Emacs users will be familiar with this idea, but new Emacs
+users may not be.  For instance, when a user hits the 'a' key, then an
+'a' is inserted into their document.  Let's pull apart the functions
+to see what that actually looks like with respect to the KLECL.
+
+@verbatim
+> (read-key)
+#\a
+> (lookup-key #\a)
+self-insert-command
+> (execute-command 'self-insert-command)
+#t
+@end verbatim
+
+Key sequences in Emacs are associated with commands.  The fact that
+each command is implemented in Lisp is an implementation detail and
+not essential to the idea of a KLECL.
+
+Note how flexible the KLECL is: One can build a REPL out of a KLECL,
+or a text editor, or a robot simulator (as shown in the video).  Emacs
+uses the KLECL to create an extensible text editor.  Emacsy uses the
+KLECL to make other applications similarly extensible.
+
+@node Goals
+@subsection Goals
+
+The goals of this project are as follows.
+
+@enumerate
+@item Easy to embed technically
+
+  Emacsy will use Guile Scheme to make it easy to embed within C and
+  C++ programs.
+
+@item Easy to learn
+
+  Emacsy should be easy enough to learn that the uninitiated may easily
+  make parametric changes, e.g., key 'a' now does what key 'b' does
+  and @emph{vice versa}.  Programmers in any language ought to be able
+  to make new commands for themselves.  And old Emacs hands should be
+  able to happily rely on old idioms and function names to change most
+  anything.
+
+@item Opinionated but not unpersuadable
+
+  Emacsy should be configured with a sensible set of defaults
+  (opinions).  Out of the box, it is not @emph{tabla rasa}, a blank
+  slate, where the user must choose every detail, every time.
+  However, if the user wants to choose every detail, they can.
+
+@item Key bindings can be modified
+
+  It wouldn't be Emacs-like if you couldn't tinker with it.
+
+@item Commands can be defined in Emacsy's language or the host
+  language
+
+  New commands can be defined in Guile Scheme or C/C++.
+
+@item Commands compose well
+
+  That is to say, commands can call other commands.  No special
+  arrangements must be considered in the general case.
+
+@item A small number of @emph{interface} functions
+
+  The core functions that must be called by the embedding application
+  will be few and straightforward to use.
+
+@item Bring KLECL to light
+
+@end enumerate
+
+@node Anti-goals
+@subsection Anti-goals
+
+Just as important as a project's goals are its anti-goals: the things
+it is not intended to do.
+
+@enumerate
+@item Not a general purpose text editor
+
+  Emacsy will not do general purpose text editing out of the box,
+  although it will have a minibuffer.
+
+@item Not an Emacs replacement
+
+  Emacs is full featured programmer's text editor with more bells and
+  whistles than most people will ever have the time to fully explore.
+  Emacsy extracts the Emacs spirit of application and UI extensibility
+  to use within other programs.
+
+@item Not an Elisp replacement
+
+  There have been many attempts to replace Emacs and elisp with an
+  newer Lisp dialect.  Emacsy is not one of them.
+
+@item Not source code compatible with Emacs
+
+  Although Emacsy may adopt some of naming conventions of Emacs, it
+  will not use elisp and will not attempt to be in any way source code
+  compatible with Emacs.
+
+@item Not a framework
+
+  I will not steal your runloop.  You call Emacsy when it suits your
+  application not the other way around.
+
+@end enumerate
+
+@node Emacsy Features
+@subsection Emacsy Features
+
+These are the core features from Emacs that will be implemented in Emacsy.
+
+@enumerate
+@item keymaps
+@item minibuffer
+@item recordable macros
+@item history
+@item tab completion
+@item major and minor modes
+@end enumerate
+
+@node The Garden
+@chapter The Garden
+
+Now for a little entertainment.
+
+@image{images/the-garden,,,,.png}
+@image{images/the-garden-2,,,,.png}
+@image{images/the-garden-3,,,,.png}
+@image{images/the-garden-4,,,,.png}
+@image{images/the-garden-5,,,,.png}
+@image{images/the-garden-6,,,,.png}
+@image{images/the-garden-7,,,,.png}
+@image{images/the-garden-8,,,,.png}
+
+@c @chapter Hello, Emacsy!
+
+@c @section Implementation Plan
+
+@c One could go about implementing a project with the aforementioned
+@c goals in many different ways.  Althought, I am interested in
+@c separating the KLECL from Emacs in particular, for instance I think
+@c implementing a KLECL in \verb|Lua| would be valuable, but I also want
+@c more than just the KLECL.  I want to provide an Emacs-like way of
+@c developing applications for developers of all stripes.
+
+@c @subsection Implementation Decisions
+
+@c @enumerate
+@c @item Use GNU Guile Scheme.
+
+@c @item Adopt Emacs naming conventions.
+
+@c @item Write as a literate program.
+
+@c   To assist in the goal of making this project understandable enough
+@c   to trust, I plan to use
+@c   \verb|nuweb|\footnote{\url{http://nuweb.sourceforge.net/}} and write
+@c   this in literate programming fashion where the source code and
+@c   documentation come from the same document.
+
+@c %@item Make code available on github
+@c @end enumerate
+
+@c *********************************************************************
+@node Installation
+@chapter Installation
+
+@cindex installing Emacsy
+Emacsy is available for download from its website at
+@url{http://www.gnu.org/pub/gnu/emacsy/}.  This section describes the
+software requirements of Emacsy, as well as how to install it and get ready
+to use it.
+
+
+@menu
+* Requirements::                Software needed to build and run Emacsy.
+* Running the Test Suites::     Testing Emacsy.
+@end menu
+
+@node Requirements
+@section Requirements
+
+This section lists requirements when building Emacsy from source.  The
+build procedure for Emacsy is the same as for GNU software, and is not
+covered here.  Please see the files @file{README} and @file{INSTALL} in
+the Emacsy source tree for additional details.
+
+Emacsy depends on the following packages:
+
+@itemize
+@item @url{http://gnu.org/software/guile/, GNU Guile}, version 2.2.4 is known to work.
+@item @url{http://nongnu.org/guile-lib/, Guile-Lib}, version 0.2.1.6 is known to work.
+@item @url{http://www.gnu.org/software/make/, GNU Make}.
+@end itemize
+
+The following dependencies are optional:
+
+@itemize
+@item @url{http://www.gnu.org/software/autoconf, Autoconf},
+@url{http://www.gnu.org/software/automake, Automake},
+@url{http://www.gnu.org/software/libtool, Libtool}, and
+@url{https://www.freedesktop.org/wiki/Software/pkg-config, pkg-config} to build from git.
+@item
+Installing @url{https://savannah.gnu.org/projects/texinfo, Texinfo},
+will allow you to build the documentation.
+@item
+Installing @url{https://freeglut.sourceforge.net, FreeGLUT},
+will allow you to build the Hello Emacsy example.
+@item
+Installing @url{https://webkitgtk.org, WebKitGTK}, will allow you to
+build the bare bones Emacsy Web browser examples.
+@end itemize
+
+
+@node Running the Test Suites
+@section Running the Test Suites
+
+@cindex test suites
+After a successful @command{configure} and @code{make} run, it is a good
+idea to run the test suites.
+
+@example
+make check
+@end example
+
+@c *********************************************************************
+@node Hello Emacsy
+@chapter Hello Emacsy
+
+I have received a lot of questions asking, what does
+Emacsy@footnote{Kickstarter page @url{http://kck.st/IY0Bau}} actually
+do?  What restrictions does it impose on the GUI toolkit?  How is it
+possible to not use any Emacs code? I thought it might be best if I
+were to provide a minimal example program, so that people can see
+code that illustrates Emacsy API usage.
+
+@image{images/minimal-emacsy-example,,,,.png}
+
+@menu
+* Embedder's API::              Unlimited power.
+* The Simplest Application Ever::  Hello Emacsy!
+* Conclusion::                  And now what?
+* Plaintext Please::            Use the Source.
+@end menu
+
+@node Embedder's API
+@section Embedder's API: Unlimited power.
+
+Here are a few function prototypes defined in @file{emacsy.h}, @pxref{C
+Api, C Api for the full list}.
+
+@c snarfed from emacsy/emacsy.c:45
+@deftypefn {C Function}  int emacsy_initialize (int init_flags)
+Initialize Emacsy.
+@end deftypefn
+
+@c snarfed from emacsy/emacsy.c:63
+@deftypefn {C Function}  void emacsy_key_event (int char_code, int modifier_key_flags)
+Enqueue a keyboard event.
+@end deftypefn
+
+@c snarfed from emacsy/emacsy.c:109
+@deftypefn {C Function}  int emacsy_tick ()
+Run an iteration of Emacsy's event loop, does not block.
+@end deftypefn
+
+@c snarfed from emacsy/emacsy.c:134
+@deftypefn {C Function}  char *emacsy_mode_line ()
+Return the mode line.
+@end deftypefn
+
+@c snarfed from emacsy/emacsy.c:177
+@deftypefn {C Function}  int emacsy_terminate ()
+Terminate Emacsy; run termination hook.
+@end deftypefn
+
+@node The Simplest Application Ever
+@section The Simplest Application Ever
+
+@include hello-emacsy.texi
+
+@node Conclusion
+@section Conclusion
+
+We implemented a simple interactive application that displays a
+number.  We embedded Emacsy into it: sending events to Emacsy and
+displaying the minibuffer.  We implemented primitive procedures so
+Emacsy could access and manipulate the application's state.  We
+extended the user interface to accept new commands @verb{|+|} and
+@verb{|-|} to change the state.
+
+Now we can @verb{|telnet localhost 37146|} to get a REPL.
+
+@node Plaintext Please
+@section Plaintext Please
+
+@c @node hello-emacsy.c
+@subsection hello-emacsy.c
+@verbatiminclude example/hello-emacsy.c
+
+@c @c @node hello-emacsy.c.x
+@c @subsection hello-emacsy.c.x
+@c @verbatiminclude example/hello-emacsy.c.x
+
+@c @node hello-emacsy.scm
+@subsection hello-emacsy.scm
+@verbatiminclude example/hello-emacsy.scm
+
+@c @node emacsy.h
+@subsection emacsy.h
+@verbatiminclude emacsy/emacsy.h
+
+@c *********************************************************************
+@node Api
+@chapter Api
+
+I expounded on the virtues of the Key Lookup Execute Command Loop
+(KLECL) in @pxref{Overlooked Treasure}.  Now we're going to implement a
+KLECL, which requires fleshing out some concepts.  We need events,
+keymaps, and commands.  Let's begin with events.
+
+@menu
+* C Api::
+* Emacsy Facade::
+* Event::
+* Keymap::
+* Command::
+* Block::
+* KLECL::                  Key-Lookup-Execute-Command-Loop
+* Kbd-Macro::              Keyboard Macros
+* Buffer::
+* Text::
+* Minibuffer::
+* Core::
+* Advice::
+* Window::                 Window module (optional)
+* Help::
+* Self-doc::               Self-documentation
+@end menu
+
+@include api.texi
+
+@c *********************************************************************
+@node Contributing
+@chapter Contributing
+
+@menu
+* Building from Git::           The latest and greatest.
+* Running Emacsy From the Source Tree::  Hacker tricks.
+* The Perfect Setup::           The right tools.
+* Coding Style::                Hygiene of the contributor.
+* Submitting Patches::          Share your work.
+@end menu
+
+@node Building from Git
+@section Building from Git
+
+If you want to hack Emacsy itself, it is recommended to use the latest
+version from the Git repository:
+
+@example
+git clone git://git.savannah.gnu.org/emacsy.git
+@end example
+
+The easiest way to set up a development environment for Emacsy is, of
+course, by using Guix!  The following command starts a new shell where
+all the dependencies and appropriate environment variables are set up to
+hack on Emacsy:
+
+@example
+GUIX_PACKAGE_PATH=guix guix environment -l .guix.scm
+@end example
+
+Finally, you have to invoke @code{make check} to run tests
+(@pxref{Running the Test Suites}).  If anything fails, take a look at
+installation instructions (@pxref{Installation}) or send a emacsysage to
+the @email{bug-emacsy@@gnu.org} mailing list.
+
+@node Running Emacsy From the Source Tree
+@section Running Emacsy From the Source Tree
+
+First, you need to have an environment with all the dependencies
+available (@pxref{Building from Git}), and then simply prefix each
+command by @command{./pre-inst-env} (the @file{pre-inst-env} script
+lives in the top build tree of Emacsy).
+
+@node The Perfect Setup
+@section The Perfect Setup
+
+The Perfect Setup to hack on Emacsy is basically the perfect setup used
+for Guile hacking (@pxref{Using Guile in Emacs,,, guile, Guile Reference
+Manual}).  First, you need more than an editor, you need
+@url{http://www.gnu.org/software/emacs, Emacs}, empowered by the
+wonderful @url{http://nongnu.org/geiser/, Geiser}.
+
+Geiser allows for interactive and incremental development from within
+Emacs: code compilation and evaluation from within buffers, access to
+on-line documentation (docstrings), context-sensitive completion,
+@kbd{M-.} to jump to an object definition, a REPL to try out your code,
+and more (@pxref{Introduction,,, geiser, Geiser User Manual}).
+
+@node Coding Style
+@section Coding Style
+
+In general our code follows the GNU Coding Standards (@pxref{Top,,,
+standards, GNU Coding Standards}).  However, they do not say much about
+Scheme, so here are some additional rules.
+
+@subsection Programming Paradigm
+
+Scheme code in Emacsy is written in a purely functional style.
+
+@subsection Formatting Code
+
+@cindex formatting code
+@cindex coding style
+When writing Scheme code, we follow common wisdom among Scheme
+programmers.  In general, we follow the
+@url{http://mumble.net/~campbell/scheme/style.txt, Riastradh's Lisp
+Style Rules}.  This document happens to describe the conventions mostly
+used in Guile’s code too.  It is very thoughtful and well written, so
+please do read it.
+
+@cindex indentation, of code
+@cindex formatting, of code
+If you do not use Emacs, please make sure to let your editor knows these
+rules.
+
+Additionally, in Emacsy we prefer to format @code{if} statements like this
+@example
+(if foo? trivial-then
+    (let ((bar (the-longer @dots{})))
+      more-complicated
+      @dots{}
+      else))
+@end example
+
+@node Submitting Patches
+@section Submitting Patches
+
+Development is done using the Git distributed version control system.
+Thus, access to the repository is not strictly necessary.  We welcome
+contributions in the form of patches as produced by @code{git
+format-patch} sent to the @email{guile-user@@gnu.org} mailing list.
+
+Please write commit logs in the ChangeLog format (@pxref{Change Logs,,,
+standards, GNU Coding Standards}); you can check the commit history for
+examples.
+
+@subsection Reporting Bugs
+
+Encountering a problem or bug can be very frustrating for you as a user
+or potential contributor.  For us as Emacsy maintainers, the preferred bug
+report includes a beautiful and tested patch that we can integrate
+without any effort.
+
+However, please don't let our preference stop you from reporting a bug.
+There's one thing @emph{much} worse for us than getting a bug report
+without a patch: Reading a complaint or rant online about your
+frustrations and how our work sucks, without having heard directly what
+you experienced.
+
+So if you report a problem, will it be fixed?  And @strong{when}?  The
+most honest answer is: It depends.  Let's curry that informationless
+honesty with a more helpful and more blunt reminder of a mantra of free
+software:
+
+@quotation
+@table @strong
+@item Q:
+When will it be finished?
+
+@item A:
+It will be ready sooner if you help.
+@end table
+
+@author Richard Stallman
+@end quotation
+
+@cindex contact, irc, mailing list
+Join us on @code{#guile} on the Freenode IRC network or on
+@email{guile-user@@gnu.org} to share your experience---good or bad.
+
+@cindex bug, bug report, reporting a bug
+Please send bug reports with full details to @email{guile-user@@gnu.org}.
+
+@c *********************************************************************
+@node Acknowledgments
+@chapter Acknowledgments
+
+We would like to thank the following people for their help:
+
+
+@c *********************************************************************
+@node Resources
+@chapter Resources
+
+@itemize
+
+@item
+@url{https://github.com/shanecelis/emacsy/, Emacsy} GSOC
+
+@item
+@url{irc.freenode.net, #guile} The Guile community home at the freenode
+IRC network.
+
+@item
+@file{guile-user@@gnu.org} The Guile user mailing list, where it all started.
+@url{https://lists.gnu.org/archive/html/guile-user/, guile-user archives}.
+
+@end itemize
+
+@c *********************************************************************
+@node GNU Free Documentation License
+@appendix GNU Free Documentation License
+@cindex license, GNU Free Documentation License
+@include fdl-1.3.texi
+
+@c *********************************************************************
+@node Programming Index
+@unnumbered Programming Index
+@syncodeindex tp fn
+@syncodeindex vr fn
+@printindex fn
+
+@node Keyboard command Index
+@unnumbered Keyboard command Index
+@printindex ky
+
+@node Concept Index
+@unnumbered Concept Index
+@printindex cp
+
+@bye
+
+@c Local Variables:
+@c ispell-local-dictionary: "american";
+@c End:

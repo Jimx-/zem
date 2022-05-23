@@ -1,0 +1,56 @@
+                                                              -*- org -*-
+#+TITLE: Building and Installing Emacsy
+
+* Get it
+#+BEGIN_EXAMPLE
+    git clone https://git.savannah.nongnu.org/git/emacsy.git
+#+END_EXAMPLE
+or
+#+BEGIN_EXAMPLE
+    wget http://download.savannah.nongnu.org/releases/emacsy/emacsy-0.4.1.tar.gz
+#+END_EXAMPLE
+
+* Prerequisites
+** GNU Guix
+#+BEGIN_EXAMPLE
+    guix environment -l guix.scm
+#+END_EXAMPLE
+
+See [[file:guix.scm][guix.scm]] for more options.
+
+** Other GNU/Linux, without the Guix package manager
+  - [[http://www.gnu.org/software/guile/][GNU Guile Scheme]], version 2.2.4 is know to work.
+  - [[http://www.nongnu.org/guile-lib/][guile-lib]], version 0.2.6.1 is known to work.
+  - [[http://www.gnu.org/software/make][GNU Make]], version 4.2.1 is known to work.
+  - [[http://www.gnu.org/software/gcc][GNU Gcc,]] version 5.5.0 is known to work.
+
+*** Optional
+  - [[http://www.gnu.org/software/autoconf][Autconf]], [[http://www.gnu.org/software/automake][Automake]], [[http://www.gnu.org/software/libtool][Libtool]], and [[https://www.freedesktop.org/wiki/Software/pkg-config][pkg-config]] to build from git.
+  - [[http://www.gnu.org/software/texinfo][GNU Texinfo]] to build the documentation.
+  - [[https://freeglut.sourceforge.net][FreeGLUT]], for the hello-emacsy example.
+  - [[https://webkitgtk.org][WebKitGTK]], to build the bare bones Emacsy Web browser examples.
+
+** Build it
+#+BEGIN_EXAMPLE
+    ./autogen.sh
+    ./configure
+    make
+#+END_EXAMPLE
+
+** Documentation
+#+BEGIN_EXAMPLE
+    make info
+    make pdf
+#+END_EXAMPLE
+
+** Install it
+#+BEGIN_EXAMPLE
+    make install
+#+END_EXAMPLE
+
+* legalese
+Copyright © 2019 Jan (janneke) Nieuwenhuizen <janneke@gnu.org>
+
+  Copying and distribution of this file, with or without modification,
+  are permitted in any medium without royalty provided the copyright
+  notice and this notice are preserved.
