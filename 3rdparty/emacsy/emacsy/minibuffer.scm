@@ -29,6 +29,7 @@
   #:use-module (system vm program)
   #:use-module (oop goops)
   #:use-module (string completion)
+  #:use-module (zem api rope)
 
   #:use-module (emacsy util)
   #:use-module (emacsy self-doc)
@@ -121,11 +122,11 @@
                        (minibuffer-message-string buffer))))
 ;;.
 (define*-public (minibuffer-contents #:optional (buffer minibuffer))
-  (gb->string (gap-buffer buffer)))
+  (rope->string (rope-buffer buffer)))
 
 ;;.
 (define*-public (delete-minibuffer-contents #:optional (buffer minibuffer))
-  (gb-erase! (gap-buffer buffer)))
+  (rope-erase! (rope-buffer buffer)))
 
 ;;.
 (define*-public (clear-minibuffer #:optional (buffer minibuffer))
@@ -151,8 +152,8 @@
 ;;   the point should be adjusted manualy.}
 
 (define-method (buffer:goto-char (buffer <minibuffer>) point)
-  (gb-goto-char (gap-buffer buffer)
-                (- point (string-length (minibuffer-prompt buffer)))))
+  (rope-goto-char (rope-buffer buffer)
+                  (- point (string-length (minibuffer-prompt buffer)))))
 
 ;; One can add a message to the minibuffer that can act as an interactive
 ;; help or show possible completions.  The message will only last until

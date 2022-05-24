@@ -14,7 +14,8 @@
   #:use-module (ice-9 gap-buffer)
   #:use-module (srfi srfi-1)
   #:use-module (oop goops)
-  #:export (<buffer-view>))
+  #:export (<buffer-view>)
+  #:declarative? #f)
 
 (define-class <buffer-view> (<view>)
   (buffer #:init-keyword #:buffer #:accessor buffer-view:buffer)
@@ -281,8 +282,9 @@
            (match-let
             (((end-y . matrix) (draw-lines view visible-line-min visible-line-max line-max line-x text-x view-width 0 text-height view-y point-line point-col '())))
             (set! (buffer-view:display-matrix view) (reverse matrix))
-            (when (and (= line-max point-line)
+            (when (and (= (car (buffer-view:last-point view)) (point-max))
                        (zero? point-col))
+              ;; Draw an empty last line
               (draw-line view line-max " " (point-max) line-max line-x text-x view-width end-y view-y point-line point-col)))
            (when (> line-max visible-line-max)
              (draw-scrollbar view visible-line-min visible-line-max line-max))

@@ -33,9 +33,11 @@ set(ZEM_SRCLIST
     src/renderer.cpp
     src/font.cpp
     src/keymap.c
+    src/rope.cpp
     src/api/api.cpp
     src/api/renderer.cpp
     src/api/font.cpp
+    src/api/rope.cpp
     )
 
 set(EXT_SRCLIST

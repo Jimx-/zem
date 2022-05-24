@@ -22,6 +22,7 @@
   #:use-module (ice-9 optargs)
   #:use-module (ice-9 gap-buffer)
   #:use-module (ice-9 regex)
+  #:use-module (zem api rope)
   #:use-module (oop goops)
   #:use-module (emacsy util)
   #:use-module (emacsy mru-stack)
@@ -395,7 +396,7 @@
 
 ;;.
 (define-method-public (buffer:line-length (buffer <buffer>))
-  (let ((start (1+ (or (save-excursion (re-search-backward newline-regex #f #t)) 0)))
+  (let ((start (1+ (or (save-excursion (move-to-last-newline)) 0)))
         (end (or (save-excursion (re-search-forward newline-regex #f #t)) (point-max))))
     (- end start)))
 
@@ -426,7 +427,7 @@
 (define-method-public (buffer:end-of-line (buffer <buffer>) n)
   (goto-char (+ (point) (- (line-length) (current-column) 1)))
   (when (and (eq? (point) (1- (point-max)))
-             (eq? 0 (and=> (char-after (1+ (point))) char->integer)))
+             (not (eqv? (char-after) #\newline)))
     (goto-char (point-max))))
 
 ;;.
@@ -440,43 +441,43 @@
 ;; @subsection Editing for Gap Buffer
 ;;.
 
-(define (gb-char-before gb point)
-  (and (> point (gb-point-min gb))
-       (string-ref (gb->string gb) (- point 2))))
+(define (rope-char-before rope point)
+  (and (> point (rope-point-min rope))
+       (string-ref (rope-substr rope (1- point) 1) 0)))
 
-(define (gb-char-after gb point)
-  (and (< point (gb-point-max gb))
-       (string-ref (gb->string gb) (1- point))))
+(define (rope-char-after rope point)
+  (and (< point (rope-point-max rope))
+       (string-ref (rope-substr rope point 1) 0)))
 
 ;; @var{<text-buffer>} inherits from buffer and implements the simplest
 ;; text editing for the Gap Buffer.
 ;;.
 (define-class-public <text-buffer> (<buffer>)
   ;;define-class <text-buffer> (<buffer>)
-  (gap-buffer #:accessor gap-buffer #:init-form (make-gap-buffer ""))
+  (rope-buffer #:accessor rope-buffer #:init-form (make-rope ""))
   (intervals #:accessor buffer-intervals #:init-form '())
   (marker #:accessor buffer-marker #:init-value #f))
-(export gap-buffer buffer-intervals)
+(export rope-buffer buffer-intervals)
 
 ;;.
 (define-method-public (buffer:buffer-string (buffer <text-buffer>))
-  (gb->string (gap-buffer buffer)))
+  (rope->string (rope-buffer buffer)))
 
 ;;.
 (define-method-public (buffer:goto-char (buffer <text-buffer>) pos)
-  (gb-goto-char (gap-buffer buffer) pos))
+  (rope-goto-char (rope-buffer buffer) pos))
 
 ;;.
 (define-method-public (buffer:point (buffer <text-buffer>))
-  (gb-point (gap-buffer buffer)))
+  (rope-point (rope-buffer buffer)))
 
 ;;.
 (define-method-public (buffer:point-min (buffer <text-buffer>))
-  (gb-point-min (gap-buffer buffer)))
+  (rope-point-min (rope-buffer buffer)))
 
 ;;.
 (define-method-public (buffer:point-max (buffer <text-buffer>))
-  (gb-point-max (gap-buffer buffer)))
+  (rope-point-max (rope-buffer buffer)))
 
 ;;.
 (define-method-public (buffer:set-mark (buffer <text-buffer>) pos)
@@ -488,28 +489,28 @@
 
 ;;.
 (define-method-public (buffer:char-before (buffer <text-buffer>) point)
-  (gb-char-before (gap-buffer buffer) point))
+  (rope-char-before (rope-buffer buffer) point))
 
 ;;.
 (define-method-public (buffer:char-after (buffer <text-buffer>) pos)
-  (gb-char-after (gap-buffer buffer) pos))
+  (rope-char-after (rope-buffer buffer) pos))
 
 ;;.
 (define-method-public (buffer:insert-string (buffer <text-buffer>) string)
-  (gb-insert-string! (gap-buffer buffer) string))
+  (rope-insert-string! (rope-buffer buffer) string))
 
 ;;.
 (define-method-public (buffer:insert-char (buffer <text-buffer>) char)
-  (gb-insert-char! (gap-buffer buffer) char))
+  (rope-insert-char! (rope-buffer buffer) (char->integer char)))
 
 ;;.
 (define-method-public (buffer:delete-char (buffer <text-buffer>) n)
-  (gb-delete-char! (gap-buffer buffer) n))
+  (rope-delete-char! (rope-buffer buffer) n))
 
 ;;.
 (define-method-public (buffer:delete-region (buffer <text-buffer>) start end)
   (let* ((point (buffer:point buffer))
-         (gb (gap-buffer buffer))
+         (rope (rope-buffer buffer))
          (s (if (< start end) start end))
          (e (if (< start end) end start)))
     (goto-char s)
@@ -517,6 +518,6 @@
           (point (cond ((> point e) (- point e s))
                        ((> point s) s)
                        (else point))))
-      (gb-delete-char! (gap-buffer buffer) (- e s))
+      (rope-delete-char! (rope-buffer buffer) (- e s))
       (goto-char point)
       text)))

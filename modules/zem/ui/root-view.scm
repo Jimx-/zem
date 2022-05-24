@@ -2,6 +2,7 @@
   #:use-module ((zem api renderer) #:prefix r:)
   #:use-module ((zem api system) #:prefix sys:)
   #:use-module ((zem ui style) #:prefix style:)
+  #:use-module (zem api rope)
   #:use-module (zem ui view)
   #:use-module (zem ui minibuffer-view)
   #:use-module (zem ui buffer-view)
