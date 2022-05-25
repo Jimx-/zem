@@ -1,5 +1,6 @@
 (define-module (zem core buffer)
   #:use-module (zem core mode)
+  #:use-module (zem api rope)
   #:use-module (emacsy emacsy)
   #:use-module (ice-9 match)
   #:use-module (ice-9 curried-definitions)
@@ -20,15 +21,37 @@
         (add-buffer! new-buffer)
         new-buffer)))
 
+(define-public (bolp)
+  (let ((c (char-before)))
+    (and c (eqv? c #\newline))))
+
 (define newline-regex (make-regexp "\\\n"))
 
-(define-public (count-lines start end)
+(define-method (buffer:count-lines (buffer <buffer>) start end)
+  (with-buffer buffer
+    (if (> end start)
+        (string-count (substring (buffer-string) start (- end start)) #\newline)
+        0)))
+
+(define-method (buffer:count-lines (buffer <text-buffer>) start end)
   (if (> end start)
-      (1+ (string-count (substring (buffer-string) start (- end start)) #\newline))
+      (rope-count-lines (rope-buffer buffer) start (- end start))
       0))
 
+(define-public (count-lines start end)
+  (save-excursion
+      (let ((lines (buffer:count-lines (current-buffer) start end)))
+        (goto-char end)
+        (if (and (> end start)
+                 (not (bolp)))
+            (1+ lines)
+            lines))))
+
 (define*-public (line-number-at-pos #:optional (pos (point)))
-  (max 1 (count-lines (point-min) pos)))
+  (let ((lines (count-lines (point-min) pos)))
+    (if (bolp)
+        (1+ lines)
+        lines)))
 
 (define-interactive (goto-line #:optional line)
   #t)

@@ -138,6 +138,23 @@ static SCM zem_rope_substr(SCM s_rope, SCM s_start, SCM s_len)
     return scm_from_locale_stringn(substr.c_str(), substr.length());
 }
 
+static SCM zem_rope_count_lines(SCM s_rope, SCM s_start, SCM s_len)
+{
+    RopeBuffer* rope = (RopeBuffer*)scm_foreign_object_ref(s_rope, 0);
+    size_t start = scm_to_uint64(s_start);
+    size_t len = Rope::npos;
+
+    start = std::max(1UL, std::min(start, rope->rope.length() + 1)) - 1;
+    if (s_len != SCM_UNDEFINED) {
+        len = scm_to_uint64(s_len);
+        len = std::min(len, rope->rope.length() - start);
+    }
+
+    auto lines = rope->rope.count_lines(start, len);
+
+    return scm_from_uint64(lines);
+}
+
 static SCM zem_rope_to_string(SCM s_rope)
 {
     return zem_rope_substr(s_rope, scm_from_uint64(1), SCM_UNDEFINED);
@@ -172,12 +189,14 @@ static void zem_api_rope_init(void* data)
     scm_c_define_gsubr("rope-erase!", 1, 0, 0, (void*)zem_rope_erase);
     scm_c_define_gsubr("rope-goto-char", 2, 0, 0, (void*)zem_rope_goto_char);
     scm_c_define_gsubr("rope-substr", 2, 1, 0, (void*)zem_rope_substr);
+    scm_c_define_gsubr("rope-count-lines", 2, 1, 0,
+                       (void*)zem_rope_count_lines);
     scm_c_define_gsubr("rope->string", 1, 0, 0, (void*)zem_rope_to_string);
 
     scm_c_export("make-rope", "rope-point", "rope-point-min", "rope-point-max",
                  "rope-insert-string!", "rope-insert-char!",
                  "rope-delete-char!", "rope-erase!", "rope-goto-char",
-                 "rope-substr", "rope->string", NULL);
+                 "rope-substr", "rope-count-lines", "rope->string", NULL);
 }
 
 void init_rope_api()

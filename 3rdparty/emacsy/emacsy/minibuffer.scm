@@ -21,7 +21,6 @@
   #:use-module (ice-9 receive)
   #:use-module (ice-9 regex)
   #:use-module (ice-9 session)
-  #:use-module (ice-9 gap-buffer)
   #:use-module (ice-9 pretty-print)
   #:use-module (ice-9 readline)
   #:use-module (srfi srfi-26)

@@ -11,7 +11,6 @@
   #:use-module (zem util plist)
   #:use-module (emacsy emacsy)
   #:use-module (ice-9 match)
-  #:use-module (ice-9 gap-buffer)
   #:use-module (srfi srfi-1)
   #:use-module (oop goops)
   #:export (<buffer-view>)
@@ -267,7 +266,7 @@
             ((view-width . view-height) (view:size view)) ;; View size
             (text-height view-height)              ;; Text area height
             (line-max                                     ;; Last line of buffer
-             (count-lines (point-min) (point-max)))       ;;
+             (1+ (count-lines (point-min) (point-max))))       ;;
             ((visible-line-min . visible-line-max)        ;; Visible line range
              (get-visible-line-range view line-max))      ;;
             (line-x (+ (car style:padding) view-x))       ;; Left of the gutter
@@ -283,7 +282,7 @@
             (((end-y . matrix) (draw-lines view visible-line-min visible-line-max line-max line-x text-x view-width 0 text-height view-y point-line point-col '())))
             (set! (buffer-view:display-matrix view) (reverse matrix))
             (when (and (= (car (buffer-view:last-point view)) (point-max))
-                       (zero? point-col))
+                       (bolp))
               ;; Draw an empty last line
               (draw-line view line-max " " (point-max) line-max line-x text-x view-width end-y view-y point-line point-col)))
            (when (> line-max visible-line-max)

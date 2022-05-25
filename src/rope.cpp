@@ -1,6 +1,14 @@
 #include "rope.h"
 
+#include <algorithm>
+
 namespace zem {
+
+Rope::LeafNode::LeafNode(std::string_view val)
+    : Rope::BaseNode(0, val.length(), 0), val(val)
+{
+    lines = std::count(val.begin(), val.end(), '\n');
+}
 
 size_t Rope::find_leaf_split(std::string_view str, size_t minsplit)
 {
@@ -15,6 +23,7 @@ std::optional<std::string> Rope::LeafNode::push_str(std::string_view str)
 {
     val += str;
     if (val.length() <= MAX_LEAF) {
+        lines = std::count(val.begin(), val.end(), '\n');
         len = val.length();
         return {};
     }
@@ -23,6 +32,7 @@ std::optional<std::string> Rope::LeafNode::push_str(std::string_view str)
     auto right = val.substr(split);
     val = val.substr(0, split);
     len = val.length();
+    lines = std::count(val.begin(), val.end(), '\n');
     return right;
 }
 
@@ -144,6 +154,51 @@ std::string Rope::substr(size_t pos, size_t len) const
     }
 
     return str;
+}
+
+size_t Rope::count_node_lines(PNode node, size_t start, size_t end)
+{
+    if (start >= end) return 0;
+
+    if (start == 0 && end == node->len) {
+        return node->lines;
+    }
+
+    if (node->height == 0) {
+        return std::count(node->get_value().begin() + start,
+                          node->get_value().begin() + end, '\n');
+    } else {
+        size_t offset = 0;
+        size_t lines = 0;
+
+        for (auto&& p : *node->get_children()) {
+            if (end <= offset) break;
+
+            auto child_start = offset;
+            auto child_end = offset + p->len;
+
+            auto rec_start = std::max(child_start, start);
+            auto rec_end = std::min(child_end, end);
+
+            lines += count_node_lines(p, rec_start - offset, rec_end - offset);
+            offset += p->len;
+        }
+
+        return lines;
+    }
+}
+
+size_t Rope::count_lines(size_t pos, size_t len) const
+{
+    size_t end;
+    std::string str;
+
+    if (len == npos)
+        end = root->len;
+    else
+        end = pos + len;
+
+    return count_node_lines(root, pos, end);
 }
 
 void Rope::clear()

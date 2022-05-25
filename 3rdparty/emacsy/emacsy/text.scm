@@ -20,7 +20,6 @@
 
 (define-module (emacsy text)
   #:use-module (ice-9 optargs)
-  #:use-module (ice-9 gap-buffer)
   #:use-module (ice-9 regex)
   #:use-module (zem api rope)
   #:use-module (oop goops)

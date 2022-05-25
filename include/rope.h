@@ -21,9 +21,10 @@ private:
     struct BaseNode {
         unsigned int height;
         size_t len;
+        size_t lines;
 
-        explicit BaseNode(unsigned int height, size_t len)
-            : height(height), len(len)
+        explicit BaseNode(unsigned int height, size_t len, size_t lines)
+            : height(height), len(len), lines(lines)
         {}
 
         virtual bool is_ok_child() const = 0;
@@ -42,11 +43,12 @@ private:
         std::vector<PNode> children;
 
         explicit InternalNode(std::vector<PNode>&& children)
-            : BaseNode(children[0]->height + 1, 0), children(children)
+            : BaseNode(children[0]->height + 1, 0, 0), children(children)
         {
-            len = 0;
-            for (auto&& p : children)
+            for (auto&& p : children) {
                 len += p->len;
+                lines += p->lines;
+            }
         }
 
         virtual bool is_ok_child() const
@@ -73,9 +75,7 @@ private:
     struct LeafNode : BaseNode {
         std::string val;
 
-        explicit LeafNode(std::string_view val)
-            : BaseNode(0, val.length()), val(val)
-        {}
+        explicit LeafNode(std::string_view val);
 
         virtual bool is_ok_child() const { return len >= MIN_LEAF; }
 
@@ -103,6 +103,8 @@ private:
     static PNode concat(const PNode& lhs, const PNode& rhs);
 
     static size_t find_leaf_split(std::string_view str, size_t minsplit);
+
+    static size_t count_node_lines(PNode node, size_t start, size_t end);
 
 public:
     class Cursor {
@@ -143,6 +145,8 @@ public:
     void edit(size_t start, size_t end, std::string_view new_str);
 
     std::string substr(size_t pos, size_t len = npos) const;
+
+    size_t count_lines(size_t pos, size_t len = npos) const;
 };
 
 class RopeBuilder {
