@@ -47,6 +47,12 @@
             (1+ lines)
             lines))))
 
+(define-interactive (count-lines-page)
+  (let ((total (count-lines (point-min) (point-max)))
+        (before (count-lines (point-min) (point)))
+        (after (count-lines (point) (point-max))))
+    (message "Page has ~a line(s) (~a + ~a)" total before after)))
+
 (define*-public (line-number-at-pos #:optional (pos (point)))
   (let ((lines (count-lines (point-min) pos)))
     (if (bolp)
