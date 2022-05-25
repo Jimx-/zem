@@ -189,6 +189,7 @@
                 (insert string)
                 (insert "\n"))
    (set! echo-area string)
+   (minibuffer-message string)
    (if emacsy-interactive?
        (wait)
        (display string))
@@ -201,7 +202,8 @@
 ;; Because the echo-area is defined in core, it seems best to deal with
 ;; it in core rather than placing echo-area handling code in minibuffer.
 (define-public (clear-echo-area)
-  (set! echo-area ""))
+  (set! echo-area "")
+  (minibuffer-message ""))
 
 ;; These are most of the C API calls.
 (define-public (emacsy-message-or-echo-area)
