@@ -38,7 +38,7 @@ static void key_callback(GLFWwindow* window, int glfw_key, int scancode,
     unsigned char key = 0;
     int mod_flags = 0;
 
-    if (action == GLFW_PRESS) {
+    if (action == GLFW_PRESS || action == GLFW_REPEAT) {
         if (glfw_key >= GLFW_KEY_A && glfw_key <= GLFW_KEY_Z)
             key = (unsigned char)(glfw_key + ('a' - 'A'));
         else if (glfw_key < 256)
