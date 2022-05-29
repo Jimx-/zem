@@ -78,10 +78,6 @@
                           (expand-file-name (read-file-name "File to save in: ")))))
         (call-with-output-file filename (lambda (port) (put-string port (buffer-string))))
         (set! (buffer-modified? (current-buffer)) #f)
-        (agenda-schedule
-         (colambda ()
-                   (message "Wrote ~a" filename))))
-      (agenda-schedule
-       (colambda ()
-                 (message "(No changes need to be saved)")))))
+        (message "Wrote ~a" filename))
+      (message "(No changes need to be saved)")))
 (define-key global-map "C-x C-s" 'save-buffer)

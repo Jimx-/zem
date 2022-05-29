@@ -148,9 +148,9 @@
  (system_lib_string)] @string")
 
 (add-hook! c++-mode-hook
-           (lambda ()
-             (set! (local-var 'tree-sitter:language)
-                   (tree-sitter-language-cpp))
-             (set! (local-var 'tree-sitter:highlight-patterns)
-                   tree-sitter-highlight-patterns-cpp)
-             (tree-sitter-highlight-mode)))
+           (colambda ()
+                     (set! (local-var 'tree-sitter:language)
+                           (tree-sitter-language-cpp))
+                     (set! (local-var 'tree-sitter:highlight-patterns)
+                           tree-sitter-highlight-patterns-cpp)
+                     (tree-sitter-highlight-mode)))

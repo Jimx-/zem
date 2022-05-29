@@ -128,13 +128,9 @@
 
                 (set! (buffer-modes (current-buffer)) (cons mode-var (buffer-modes (current-buffer))))
 
-                (agenda-schedule
-                 (let ((buffer (current-buffer)))
-                   (colambda ()
-                             (with-buffer buffer
-                               (message "~a ~aabled in current buffer"
-                                        pretty-name
-                                        (if (local-var (quote mode)) "en" "dis"))))))))))))))
+                (message "~a ~aabled in current buffer"
+                         pretty-name
+                         (if (local-var (quote mode)) "en" "dis"))))))))))
 
 (define-public auto-mode-alist '())
 
