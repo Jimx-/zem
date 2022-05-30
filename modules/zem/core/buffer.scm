@@ -59,12 +59,19 @@
         (1+ lines)
         lines)))
 
+(define-method (buffer:next-lines (buffer <buffer>) count)
+  (with-buffer buffer
+    (re-search-forward newline-regex #f #t (max 0 count))))
+
+(define-method (buffer:next-lines (buffer <text-buffer>) count)
+  (rope-next-lines (rope-buffer buffer) count))
+
 (define-interactive (goto-line #:optional line)
   #t)
 (define-interactive (goto-line #:optional (line (string->number
                                                  (read-from-minibuffer "Goto line: "))))
   (goto-char (point-min))
-  (re-search-forward newline-regex #f #t (max 0 (- line 1))))
+  (buffer:next-lines (current-buffer) (1- line)))
 (define-key global-map "M-g M-g" 'goto-line)
 
 (define (after-find-file)

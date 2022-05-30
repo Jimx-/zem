@@ -52,6 +52,10 @@
   ((compose buffer:buffer-string current-buffer)))
 
 ;;.
+(define-public (buffer-substring start end)
+  (buffer:buffer-substring (current-buffer) start end))
+
+;;.
 (define-public (point)
   ((compose buffer:point current-buffer)))
 
@@ -391,12 +395,28 @@
                        (list regex string pt) #f)))))))
 
 
+;; @var{<text-buffer>} inherits from buffer and implements the simplest
+;; text editing for the Gap Buffer.
+;;.
+(define-class-public <text-buffer> (<buffer>)
+  ;;define-class <text-buffer> (<buffer>)
+  (rope-buffer #:accessor rope-buffer #:init-form (make-rope ""))
+  (intervals #:accessor buffer-intervals #:init-form '())
+  (marker #:accessor buffer-marker #:init-value #f))
+(export rope-buffer buffer-intervals)
+
+;;.
 (define newline-regex (make-regexp "\\\n"))
 
 ;;.
 (define-method-public (buffer:line-length (buffer <buffer>))
   (let ((start (1+ (or (save-excursion (move-to-last-newline)) 0)))
         (end (or (save-excursion (re-search-forward newline-regex #f #t)) (point-max))))
+    (- end start)))
+
+(define-method-public (buffer:line-length (buffer <text-buffer>))
+  (let ((start (1+ (or (save-excursion (move-to-last-newline)) 0)))
+        (end (save-excursion (rope-next-lines (rope-buffer buffer) 1))))
     (- end start)))
 
 
@@ -448,19 +468,13 @@
   (and (< point (rope-point-max rope))
        (string-ref (rope-substr rope point 1) 0)))
 
-;; @var{<text-buffer>} inherits from buffer and implements the simplest
-;; text editing for the Gap Buffer.
-;;.
-(define-class-public <text-buffer> (<buffer>)
-  ;;define-class <text-buffer> (<buffer>)
-  (rope-buffer #:accessor rope-buffer #:init-form (make-rope ""))
-  (intervals #:accessor buffer-intervals #:init-form '())
-  (marker #:accessor buffer-marker #:init-value #f))
-(export rope-buffer buffer-intervals)
-
 ;;.
 (define-method-public (buffer:buffer-string (buffer <text-buffer>))
   (rope->string (rope-buffer buffer)))
+
+;;.
+(define-method-public (buffer:buffer-substring (buffer <text-buffer>) start end)
+  (rope-substr (rope-buffer buffer) start (- end start)))
 
 ;;.
 (define-method-public (buffer:goto-char (buffer <text-buffer>) pos)
@@ -513,7 +527,7 @@
          (s (if (< start end) start end))
          (e (if (< start end) end start)))
     (goto-char s)
-    (let ((text (substring (buffer:buffer-string buffer) (1- s) (1- e)))
+    (let ((text (buffer:buffer-substring buffer s e))
           (point (cond ((> point e) (- point e s))
                        ((> point s) s)
                        (else point))))

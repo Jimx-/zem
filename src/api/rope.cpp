@@ -121,6 +121,16 @@ static SCM zem_rope_goto_char(SCM s_rope, SCM s_new_point)
     return scm_from_uint64(rope->point + 1);
 }
 
+static SCM zem_rope_next_lines(SCM s_rope, SCM s_count)
+{
+    RopeBuffer* rope = (RopeBuffer*)scm_foreign_object_ref(s_rope, 0);
+    size_t count = scm_to_uint64(s_count);
+
+    rope->point = rope->rope.next_lines(rope->point, count);
+
+    return scm_from_uint64(rope->point + 1);
+}
+
 static SCM zem_rope_substr(SCM s_rope, SCM s_start, SCM s_len)
 {
     RopeBuffer* rope = (RopeBuffer*)scm_foreign_object_ref(s_rope, 0);
@@ -188,6 +198,7 @@ static void zem_api_rope_init(void* data)
                        (void*)zem_rope_delete_char);
     scm_c_define_gsubr("rope-erase!", 1, 0, 0, (void*)zem_rope_erase);
     scm_c_define_gsubr("rope-goto-char", 2, 0, 0, (void*)zem_rope_goto_char);
+    scm_c_define_gsubr("rope-next-lines", 2, 0, 0, (void*)zem_rope_next_lines);
     scm_c_define_gsubr("rope-substr", 2, 1, 0, (void*)zem_rope_substr);
     scm_c_define_gsubr("rope-count-lines", 2, 1, 0,
                        (void*)zem_rope_count_lines);
@@ -196,7 +207,8 @@ static void zem_api_rope_init(void* data)
     scm_c_export("make-rope", "rope-point", "rope-point-min", "rope-point-max",
                  "rope-insert-string!", "rope-insert-char!",
                  "rope-delete-char!", "rope-erase!", "rope-goto-char",
-                 "rope-substr", "rope-count-lines", "rope->string", NULL);
+                 "rope-next-lines", "rope-substr", "rope-count-lines",
+                 "rope->string", NULL);
 }
 
 void init_rope_api()

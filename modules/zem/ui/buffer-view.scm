@@ -79,19 +79,12 @@
   (with-buffer (buffer-view:buffer view)
     (* (get-line-height-default) (- (count-lines (point-min) (point-max)) 1))))
 
-(define (collect-line/recur)
-    (let ((c (char-after)))
-      (cond
-       ((= (point) (point-max))
-        '())
-       ((eqv? c #\newline)
-        (forward-char)
-        '())
-       (else
-        (forward-char)
-        (cons c (collect-line/recur))))))
 (define (collect-line)
-  (apply string (collect-line/recur)))
+  (let ((opoint (point))
+        (length (max 1 (line-length))))
+    (forward-line)
+    (move-beginning-of-line)
+    (buffer-substring opoint (1- (+ opoint length)))))
 
 (define (face->foreground face)
   (let ((foreground (face-attribute face ':foreground #t)))
