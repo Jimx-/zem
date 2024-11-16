@@ -23,6 +23,10 @@ include_directories(${TOPDIR}/include/
     ${FREETYPE_INCLUDE_DIRS}
     )
 
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
+
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
+
 add_subdirectory(extensions)
 
 set(ZEM_SRCLIST
@@ -52,3 +56,6 @@ target_link_libraries(zem glad::glad
                           ${GUILE_LIBRARY}
                           ${READLINE_LIBRARY}
                           ${FREETYPE_LIBRARIES})
+
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
+    

@@ -6,7 +6,7 @@
   #:use-module (ice-9 regex)
   #:export (enter-c++-mode))
 
-(load-extension "libguile-tree-sitter-cpp" "init_tree_sitter_cpp")
+(load-extension "libguile-tree-sitter-cc" "init_tree_sitter_cc")
 
 (define-derived-mode c++-mode prog-mode "C++")
 
