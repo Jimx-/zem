@@ -29,10 +29,10 @@ git submodule update --init --recursive
 Build the editor with:
 #+BEGIN_SRC shell
 mkdir build
+conan install . --output-folder=build --build=missing --settings=build_type=Debug
 cd build
 ln -s ../data/monospace.ttf
-conan install ..
-cmake ..
+cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake
 make
 #+END_SRC
 
