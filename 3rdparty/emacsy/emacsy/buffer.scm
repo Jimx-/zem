@@ -98,13 +98,13 @@
   (syntax-rules ()
     ((save-excursion body ...)
      (let ((old-buffer (current-buffer))
-           (old-point (point)))
+           (old-point ((@ (emacsy text) point))))
        (in-out-guard
         (lambda _ #t)
         (lambda _ body ...)
         (lambda _
           (set-buffer! old-buffer)
-          (goto-char old-point)))))))
+          ((@ (emacsy text) goto-char) old-point)))))))
 
 ;;.
 (define-class <buffer> ()

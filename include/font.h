@@ -1,6 +1,8 @@
 #ifndef _ZEM_FONT_H
 #define _ZEM_FONT_H
 
+#include <cstdint>
+
 #include <ft2build.h>
 #include FT_FREETYPE_H
 

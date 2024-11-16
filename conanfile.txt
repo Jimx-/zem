@@ -3,11 +3,11 @@ glad/0.1.33
 glfw/3.3.2
 glm/0.9.9.8
 spdlog/[>=1.4.1]
-tree-sitter/0.17.3
+tree-sitter/0.24.3
 
 [generators]
-cmake
+CMakeDeps
+CMakeToolchain
 
 [options]
-spdlog:shared = True
-glad:gl_version = 4.3
+glad/*:gl_version = 4.3

@@ -164,6 +164,7 @@ void GLSLShaderProgram::uniform_(const BaseShaderProgram::Binding& b, int v0,
         case GL_INT:
         case GL_SAMPLER_2D:
             glUniform1i(id, v0);
+            break;
         case GL_INT_VEC2:
             glUniform2i(id, v0, v1);
             break;
